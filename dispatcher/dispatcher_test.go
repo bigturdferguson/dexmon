@@ -64,6 +64,14 @@ func TestSend_NormalPriority(t *testing.T) {
 	if captured.Get("user") != "user-key-brandon" {
 		t.Errorf("user key not forwarded")
 	}
+
+	state, err := st.GetAlarmState("jessica", "High", "brandon")
+	if err != nil {
+		t.Fatalf("GetAlarmState: %v", err)
+	}
+	if state.LastFiredAt == nil {
+		t.Error("expected LastFiredAt set after successful Send")
+	}
 }
 
 func TestSend_HighPriority(t *testing.T) {

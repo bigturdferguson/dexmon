@@ -98,6 +98,24 @@ func (s *Store) UpsertAlarmState(state types.AlarmState) error {
 	return err
 }
 
+// UpdateFiredState sets last_fired_at and optionally receipt_id/receipt_expires_at
+// without touching snoozed_until. Use this instead of UpsertAlarmState when dispatching.
+func (s *Store) UpdateFiredState(account, alarmName, recipient string, lastFiredAt time.Time, receiptID *string, receiptExpiresAt *time.Time) error {
+	_, err := s.db.Exec(`
+		INSERT INTO alarm_state (account, alarm_name, recipient, last_fired_at, receipt_id, receipt_expires_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(account, alarm_name, recipient) DO UPDATE SET
+		    last_fired_at      = excluded.last_fired_at,
+		    receipt_id         = excluded.receipt_id,
+		    receipt_expires_at = excluded.receipt_expires_at`,
+		account, alarmName, recipient,
+		lastFiredAt.UTC(),
+		nullString(receiptID),
+		nullTime(receiptExpiresAt),
+	)
+	return err
+}
+
 func (s *Store) ClearAlarmRearm(account, alarmName, recipient string) error {
 	_, err := s.db.Exec(
 		`UPDATE alarm_state SET last_fired_at = NULL, snoozed_until = NULL

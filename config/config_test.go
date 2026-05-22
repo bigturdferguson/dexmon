@@ -163,6 +163,45 @@ callback_url  = ""
 	}
 }
 
+func TestLoad_RejectsEmergencyAlarmWithoutRetry(t *testing.T) {
+	path := writeConfig(t, `
+[server]
+callback_port = 8080
+callback_url  = ""
+
+[health]
+  [health.dexcom_timeout]
+  max_missed_readings = 3
+  priority            = "emergency"
+  recipients          = []
+  [health.watchdog]
+  ping_url = ""
+
+[recipients]
+  [recipients.brandon]
+  pushover_user_key = "ukey"
+
+[accounts]
+  [accounts.jessica]
+  dexcom_username = "u"
+  dexcom_password = "p"
+  poll_interval   = "5m"
+
+  [[accounts.jessica.alarms]]
+  name       = "Severe Low"
+  threshold  = 55
+  direction  = "below"
+  trend      = ["flat"]
+  priority   = "emergency"
+  expire     = "2h"
+  recipients = ["brandon"]
+`)
+	_, err := config.Load(path)
+	if err == nil {
+		t.Fatal("expected error for emergency alarm without retry field, got nil")
+	}
+}
+
 func TestLoad_RejectsEmptyTrend(t *testing.T) {
 	path := writeConfig(t, `
 [server]

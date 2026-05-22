@@ -3,6 +3,7 @@ package dispatcher
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -10,7 +11,6 @@ import (
 
 	"dexmon/config"
 	"dexmon/store"
-	"dexmon/types"
 )
 
 const defaultPushoverAPI = "https://api.pushover.net/1/messages.json"
@@ -69,7 +69,14 @@ func (d *Dispatcher) Send(req SendRequest, now time.Time) error {
 	if err != nil {
 		return fmt.Errorf("pushover send: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("pushover send: status %d", resp.StatusCode)
+	}
 
 	var result struct {
 		Status  int    `json:"status"`
@@ -78,27 +85,22 @@ func (d *Dispatcher) Send(req SendRequest, now time.Time) error {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("pushover send: decode response: %w", err)
 	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("pushover send: status %d", resp.StatusCode)
+	if result.Status != 1 {
+		return fmt.Errorf("pushover send: API error (status %d)", result.Status)
 	}
 
-	lastFired := now
-	state := types.AlarmState{
-		Account:     req.Account,
-		AlarmName:   req.AlarmName,
-		Recipient:   req.Recipient,
-		LastFiredAt: &lastFired,
-	}
+	var receiptID *string
+	var receiptExpiresAt *time.Time
 
 	if req.Alarm.Priority == "emergency" && result.Receipt != "" {
 		rid := result.Receipt
-		state.ReceiptID = &rid
+		receiptID = &rid
 		expireDur, _ := time.ParseDuration(req.Alarm.Expire)
 		t := now.Add(expireDur)
-		state.ReceiptExpiresAt = &t
+		receiptExpiresAt = &t
 	}
 
-	return d.store.UpsertAlarmState(state)
+	return d.store.UpdateFiredState(req.Account, req.AlarmName, req.Recipient, now, receiptID, receiptExpiresAt)
 }
 
 func priorityCode(p string) int {

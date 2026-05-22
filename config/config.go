@@ -109,6 +109,14 @@ func validate(cfg *Config) error {
 					}
 				}
 			}
+			if alarm.Priority == "emergency" {
+				if alarm.Retry == "" {
+					return fmt.Errorf("account %q, alarm %q: emergency alarms require a retry value", name, alarm.Name)
+				}
+				if alarm.Expire == "" {
+					return fmt.Errorf("account %q, alarm %q: emergency alarms require an expire value", name, alarm.Name)
+				}
+			}
 			for _, r := range alarm.Recipients {
 				if _, ok := cfg.Recipients[r]; !ok {
 					return fmt.Errorf("account %q, alarm %q: unknown recipient %q", name, alarm.Name, r)
