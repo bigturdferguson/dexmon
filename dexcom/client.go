@@ -3,6 +3,7 @@ package dexcom
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -17,6 +18,8 @@ const (
 	defaultBase = "https://share2.dexcom.com/ShareWebServices/Services"
 	appID       = "d89443d2-327c-4a6f-89e5-496bbb0317db"
 )
+
+var ErrSessionExpired = errors.New("dexcom: session expired")
 
 type Client struct {
 	username  string
@@ -37,6 +40,10 @@ func NewWithBase(username, password, base string) *Client {
 		base:     base,
 		http:     &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+func (c *Client) HasSession() bool {
+	return c.sessionID != ""
 }
 
 func (c *Client) Login() error {
@@ -72,7 +79,7 @@ func (c *Client) FetchLatest(account string) (*types.Reading, error) {
 		}
 	}
 	reading, err := c.fetchLatestRaw(account)
-	if err != nil && strings.Contains(err.Error(), "session expired") {
+	if errors.Is(err, ErrSessionExpired) {
 		if loginErr := c.Login(); loginErr != nil {
 			return nil, loginErr
 		}
@@ -99,7 +106,7 @@ func (c *Client) fetchLatestRaw(account string) (*types.Reading, error) {
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
 		c.sessionID = ""
-		return nil, fmt.Errorf("dexcom fetch: session expired")
+		return nil, ErrSessionExpired
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("dexcom fetch: status %d", resp.StatusCode)

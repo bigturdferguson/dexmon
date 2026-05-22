@@ -24,6 +24,9 @@ func TestLogin_StoresSessionID(t *testing.T) {
 	if err := c.Login(); err != nil {
 		t.Fatalf("Login: %v", err)
 	}
+	if !c.HasSession() {
+		t.Error("expected session to be stored after Login")
+	}
 }
 
 func TestFetchLatest_ReturnsReading(t *testing.T) {
