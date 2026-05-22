@@ -1,0 +1,75 @@
+package callback
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+
+	"dexmon/store"
+)
+
+type Server struct {
+	store *store.Store
+	port  int
+	mux   *http.ServeMux
+}
+
+func New(store *store.Store, port int) *Server {
+	s := &Server{store: store, port: port, mux: http.NewServeMux()}
+	s.mux.HandleFunc("POST /pushover/callback", s.handleCallback)
+	return s
+}
+
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.mux.ServeHTTP(w, r)
+}
+
+func (s *Server) Start() {
+	addr := fmt.Sprintf(":%d", s.port)
+	log.Printf("callback server listening on %s", addr)
+	if err := http.ListenAndServe(addr, s.mux); err != nil {
+		log.Fatalf("callback server: %v", err)
+	}
+}
+
+type callbackPayload struct {
+	Receipt        string `json:"receipt"`
+	AcknowledgedAt int64  `json:"acknowledged_at"`
+	Snooze         int    `json:"snooze"` // seconds; 0 means no snooze
+}
+
+func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
+	var payload callbackPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	state, err := s.store.GetAlarmStateByReceiptID(payload.Receipt)
+	if err != nil {
+		log.Printf("callback: lookup receipt %s: %v", payload.Receipt, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if state == nil {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	state.ReceiptID = nil
+	state.ReceiptExpiresAt = nil
+
+	if payload.Snooze > 0 {
+		snoozedUntil := time.Now().UTC().Add(time.Duration(payload.Snooze) * time.Second)
+		state.SnoozedUntil = &snoozedUntil
+	}
+
+	if err := s.store.UpsertAlarmState(*state); err != nil {
+		log.Printf("callback: update state: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
