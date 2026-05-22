@@ -99,12 +99,15 @@ func TestEvaluate_SkipsWhenSnoozed(t *testing.T) {
 	reading := types.Reading{Account: "jessica", Value: 65, Trend: types.TrendFlat}
 	now := time.Now().UTC()
 
-	fire, _, err := evaluator.Evaluate("jessica", []config.AlarmConfig{baseAlarm}, reading, store, now)
+	fire, rearm, err := evaluator.Evaluate("jessica", []config.AlarmConfig{baseAlarm}, reading, store, now)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(fire) != 0 {
 		t.Errorf("expected no fire during snooze, got %d", len(fire))
+	}
+	if len(rearm) != 0 {
+		t.Errorf("expected no rearm while triggered+snoozed, got %d", len(rearm))
 	}
 }
 
@@ -244,5 +247,33 @@ func TestEvaluate_NoRearmWhenDisabled(t *testing.T) {
 	}
 	if len(rearm) != 0 {
 		t.Errorf("expected no rearm when rearm_on_recovery=false, got %d", len(rearm))
+	}
+}
+
+func TestEvaluate_EmergencyIgnoresBackoff(t *testing.T) {
+	store := newMockStore()
+	recent := time.Now().UTC().Add(-1 * time.Minute) // fired 1m ago, but emergency ignores backoff
+	store.set("jessica", "Severe Low", "brandon", &types.AlarmState{LastFiredAt: &recent})
+
+	emergencyAlarm := config.AlarmConfig{
+		Name:       "Severe Low",
+		Threshold:  55,
+		Direction:  "below",
+		Trend:      []string{"flat"},
+		Priority:   "emergency",
+		Retry:      "5m",
+		Expire:     "2h",
+		Backoff:    "60m", // would block a non-emergency, but emergency ignores this
+		Recipients: []string{"brandon"},
+	}
+	reading := types.Reading{Account: "jessica", Value: 50, Trend: types.TrendFlat}
+	now := time.Now().UTC()
+
+	fire, _, err := evaluator.Evaluate("jessica", []config.AlarmConfig{emergencyAlarm}, reading, store, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fire) != 1 {
+		t.Errorf("expected emergency alarm to fire despite backoff state, got %d fire results", len(fire))
 	}
 }

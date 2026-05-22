@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"dexmon/types"
 )
 
 type Config struct {
@@ -111,6 +112,26 @@ func validate(cfg *Config) error {
 			for _, r := range alarm.Recipients {
 				if _, ok := cfg.Recipients[r]; !ok {
 					return fmt.Errorf("account %q, alarm %q: unknown recipient %q", name, alarm.Name, r)
+				}
+			}
+			if len(alarm.Trend) == 0 {
+				return fmt.Errorf("account %q, alarm %q: trend list must not be empty", name, alarm.Name)
+			}
+			validTrends := map[string]bool{
+				string(types.TrendDoubleUp):       true,
+				string(types.TrendSingleUp):       true,
+				string(types.TrendFortyFiveUp):    true,
+				string(types.TrendFlat):           true,
+				string(types.TrendFortyFiveDown):  true,
+				string(types.TrendSingleDown):     true,
+				string(types.TrendDoubleDown):     true,
+				string(types.TrendNotComputable):  true,
+				string(types.TrendRateOutOfRange): true,
+				string(types.TrendNone):           true,
+			}
+			for _, t := range alarm.Trend {
+				if !validTrends[t] {
+					return fmt.Errorf("account %q, alarm %q: invalid trend value %q", name, alarm.Name, t)
 				}
 			}
 		}
