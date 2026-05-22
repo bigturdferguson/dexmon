@@ -30,3 +30,9 @@ func (s *Store) PruneReadings(account string, before time.Time) error {
 	)
 	return err
 }
+
+func (s *Store) CountReadings(account string) (int, error) {
+	var count int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM readings WHERE account = ?`, account).Scan(&count)
+	return count, err
+}
