@@ -54,8 +54,12 @@ func TestPruneReadings_RemovesOldRecords(t *testing.T) {
 	old := time.Now().UTC().Add(-40 * 24 * time.Hour)
 	recent := time.Now().UTC().Add(-1 * time.Hour)
 
-	_ = s.InsertReading(types.Reading{Account: "jessica", Value: 80, Trend: types.TrendFlat, RecordedAt: old})
-	_ = s.InsertReading(types.Reading{Account: "jessica", Value: 90, Trend: types.TrendFlat, RecordedAt: recent})
+	if err := s.InsertReading(types.Reading{Account: "jessica", Value: 80, Trend: types.TrendFlat, RecordedAt: old}); err != nil {
+		t.Fatalf("setup InsertReading: %v", err)
+	}
+	if err := s.InsertReading(types.Reading{Account: "jessica", Value: 90, Trend: types.TrendFlat, RecordedAt: recent}); err != nil {
+		t.Fatalf("setup InsertReading: %v", err)
+	}
 
 	cutoff := time.Now().UTC().Add(-30 * 24 * time.Hour)
 	if err := s.PruneReadings("jessica", cutoff); err != nil {
@@ -98,8 +102,12 @@ func TestUpsertAlarmState_UpdatesExistingRow(t *testing.T) {
 	t1 := time.Now().UTC().Add(-10 * time.Minute).Truncate(time.Second)
 	t2 := time.Now().UTC().Truncate(time.Second)
 
-	_ = s.UpsertAlarmState(types.AlarmState{Account: "jessica", AlarmName: "Low", Recipient: "brandon", LastFiredAt: &t1})
-	_ = s.UpsertAlarmState(types.AlarmState{Account: "jessica", AlarmName: "Low", Recipient: "brandon", LastFiredAt: &t2})
+	if err := s.UpsertAlarmState(types.AlarmState{Account: "jessica", AlarmName: "Low", Recipient: "brandon", LastFiredAt: &t1}); err != nil {
+		t.Fatalf("setup UpsertAlarmState: %v", err)
+	}
+	if err := s.UpsertAlarmState(types.AlarmState{Account: "jessica", AlarmName: "Low", Recipient: "brandon", LastFiredAt: &t2}); err != nil {
+		t.Fatalf("setup UpsertAlarmState: %v", err)
+	}
 
 	got, err := s.GetAlarmState("jessica", "Low", "brandon")
 	if err != nil {
@@ -134,7 +142,9 @@ func TestGetAlarmStateByReceiptID(t *testing.T) {
 		ReceiptID:        &rid,
 		ReceiptExpiresAt: &expires,
 	}
-	_ = s.UpsertAlarmState(state)
+	if err := s.UpsertAlarmState(state); err != nil {
+		t.Fatalf("setup UpsertAlarmState: %v", err)
+	}
 
 	got, err := s.GetAlarmStateByReceiptID(rid)
 	if err != nil {
@@ -163,13 +173,18 @@ func TestClearAlarmRearm_ClearsLastFiredAndSnooze(t *testing.T) {
 		ReceiptID:        &rid,
 		ReceiptExpiresAt: &expires,
 	}
-	_ = s.UpsertAlarmState(state)
+	if err := s.UpsertAlarmState(state); err != nil {
+		t.Fatalf("setup UpsertAlarmState: %v", err)
+	}
 
 	if err := s.ClearAlarmRearm("jessica", "Low", "brandon"); err != nil {
 		t.Fatalf("ClearAlarmRearm: %v", err)
 	}
 
-	got, _ := s.GetAlarmState("jessica", "Low", "brandon")
+	got, err := s.GetAlarmState("jessica", "Low", "brandon")
+	if err != nil {
+		t.Fatalf("GetAlarmState after clear: %v", err)
+	}
 	if got.LastFiredAt != nil {
 		t.Error("expected LastFiredAt cleared")
 	}

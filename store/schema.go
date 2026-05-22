@@ -22,4 +22,5 @@ CREATE TABLE IF NOT EXISTS alarm_state (
     receipt_expires_at DATETIME,
     UNIQUE (account, alarm_name, recipient)
 );
+CREATE INDEX IF NOT EXISTS idx_alarm_state_receipt_id ON alarm_state (receipt_id);
 `
