@@ -55,6 +55,9 @@ func TestCallback_ClearsReceiptOnAck(t *testing.T) {
 	if state.ReceiptID != nil {
 		t.Error("expected ReceiptID cleared on acknowledgment")
 	}
+	if state.ReceiptExpiresAt != nil {
+		t.Error("expected ReceiptExpiresAt cleared on acknowledgment")
+	}
 }
 
 func TestCallback_SetsSnoozedUntilWhenSnoozeProvided(t *testing.T) {
@@ -88,6 +91,9 @@ func TestCallback_SetsSnoozedUntilWhenSnoozeProvided(t *testing.T) {
 	state, _ := st.GetAlarmState("jessica", "Low", "brandon")
 	if state.ReceiptID != nil {
 		t.Error("expected ReceiptID cleared")
+	}
+	if state.ReceiptExpiresAt != nil {
+		t.Error("expected ReceiptExpiresAt cleared on snooze")
 	}
 	if state.SnoozedUntil == nil {
 		t.Fatal("expected SnoozedUntil set")

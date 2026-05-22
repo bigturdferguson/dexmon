@@ -26,12 +26,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-func (s *Server) Start() {
+func (s *Server) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Printf("callback server listening on %s", addr)
-	if err := http.ListenAndServe(addr, s.mux); err != nil {
-		log.Fatalf("callback server: %v", err)
-	}
+	return http.ListenAndServe(addr, s.mux)
 }
 
 type callbackPayload struct {
