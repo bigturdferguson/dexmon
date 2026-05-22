@@ -61,6 +61,7 @@ func (p *Poller) Run() {
 
 // Tick executes one poll cycle. Exported for testing.
 func (p *Poller) Tick() {
+	now := time.Now().UTC()
 	reading, err := p.fetcher.FetchLatest(p.accountName)
 	if err != nil {
 		p.missCount++
@@ -95,7 +96,7 @@ func (p *Poller) Tick() {
 		health.PingWatchdog(url)
 	}
 
-	toFire, toRearm, err := evaluator.Evaluate(p.accountName, p.cfg.Alarms, *reading, p.store, time.Now().UTC())
+	toFire, toRearm, err := evaluator.Evaluate(p.accountName, p.cfg.Alarms, *reading, p.store, now)
 	if err != nil {
 		log.Printf("[%s] evaluate: %v", p.accountName, err)
 		return
@@ -117,7 +118,7 @@ func (p *Poller) Tick() {
 			Message:   formatMessage(*reading, result.Alarm),
 			Alarm:     result.Alarm,
 		}
-		if err := p.disp.Send(req, time.Now().UTC()); err != nil {
+		if err := p.disp.Send(req, now); err != nil {
 			log.Printf("[%s] dispatch to %s: %v", p.accountName, result.Recipient, err)
 		}
 	}
