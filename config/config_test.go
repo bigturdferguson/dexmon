@@ -13,7 +13,9 @@ func writeConfig(t *testing.T, content string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.WriteString(content)
+	if _, err := f.WriteString(content); err != nil {
+		t.Fatal(err)
+	}
 	f.Close()
 	return f.Name()
 }

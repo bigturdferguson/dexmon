@@ -99,12 +99,29 @@ func validate(cfg *Config) error {
 			if alarm.Priority != "emergency" && alarm.Priority != "high" && alarm.Priority != "normal" {
 				return fmt.Errorf("account %q, alarm %q: priority must be emergency/high/normal", name, alarm.Name)
 			}
+			for _, field := range []struct{ name, val string }{
+				{"retry", alarm.Retry}, {"expire", alarm.Expire}, {"backoff", alarm.Backoff},
+			} {
+				if field.val != "" {
+					if _, err := time.ParseDuration(field.val); err != nil {
+						return fmt.Errorf("account %q, alarm %q: invalid %s %q: %w", name, alarm.Name, field.name, field.val, err)
+					}
+				}
+			}
 			for _, r := range alarm.Recipients {
 				if _, ok := cfg.Recipients[r]; !ok {
 					return fmt.Errorf("account %q, alarm %q: unknown recipient %q", name, alarm.Name, r)
 				}
 			}
 		}
+	}
+	for _, r := range cfg.Health.DexcomTimeout.Recipients {
+		if _, ok := cfg.Recipients[r]; !ok {
+			return fmt.Errorf("health.dexcom_timeout: unknown recipient %q", r)
+		}
+	}
+	if p := cfg.Health.DexcomTimeout.Priority; p != "" && p != "emergency" && p != "high" && p != "normal" {
+		return fmt.Errorf("health.dexcom_timeout: priority must be emergency/high/normal, got %q", p)
 	}
 	return nil
 }
