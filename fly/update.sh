@@ -57,9 +57,10 @@ push_secrets() {
     SECRET_ARGS=()
     while IFS= read -r VAR; do
         [ -z "$VAR" ] && continue
-        printf 'Value for %s: ' "$VAR" >/dev/tty
+        printf 'Value for %s (leave blank to keep existing): ' "$VAR" >/dev/tty
         read -rs VALUE < /dev/tty || die "Aborted by user."
         printf '\n' >/dev/tty
+        [ -z "$VALUE" ] && continue
         SECRET_ARGS+=("$VAR=$VALUE")
     done <<< "$VARS"
     if [ "${#SECRET_ARGS[@]}" -gt 0 ]; then
@@ -76,9 +77,10 @@ push_all() {
     SECRET_ARGS=()
     while IFS= read -r VAR; do
         [ -z "$VAR" ] && continue
-        printf 'Value for %s: ' "$VAR" >/dev/tty
+        printf 'Value for %s (leave blank to keep existing): ' "$VAR" >/dev/tty
         read -rs VALUE < /dev/tty || die "Aborted by user."
         printf '\n' >/dev/tty
+        [ -z "$VALUE" ] && continue
         SECRET_ARGS+=("$VAR=$VALUE")
     done <<< "$VARS"
     info "Setting all secrets in one call..."
