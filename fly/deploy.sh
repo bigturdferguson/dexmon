@@ -110,7 +110,7 @@ fi
 # ── Step 11: deploy ──────────────────────────────────────────────────────────
 info "Deploying to Fly.io..."
 cd "$PROJECT_ROOT"
-$FLY deploy --config fly/fly.toml
+$FLY deploy --remote-only --config fly/fly.toml
 
 # ── Step 12: post-deploy instructions ────────────────────────────────────────
 echo ""

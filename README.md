@@ -341,7 +341,7 @@ To automatically deploy on every push to `main`:
    - Name: `FLY_API_TOKEN`
    - Value: the token from step 1
 
-The workflow file is already at `.github/workflows/fly-deploy.yml`. To disable CI/CD, delete that file or remove the `FLY_API_TOKEN` secret.
+The workflow file is already at `.github/workflows/fly-deploy.yml`. Before enabling CI/CD, make sure you have run `./fly/deploy.sh` at least once and committed the updated `fly/fly.toml` — it must contain your real app name, not the placeholder. To disable CI/CD, delete the workflow file or remove the `FLY_API_TOKEN` secret.
 
 ---
 

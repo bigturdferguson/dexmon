@@ -67,6 +67,24 @@ push_secrets() {
     fi
 }
 
+push_all() {
+    info "Encoding config.toml and scanning for environment variables..."
+    CONFIG_B64=$(base64 < "$CONFIG_PATH" | tr -d '\n')
+    VARS=$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$CONFIG_PATH" \
+        | sed 's/\${//;s/}//' \
+        | sort -u) || true
+    SECRET_ARGS=()
+    while IFS= read -r VAR; do
+        [ -z "$VAR" ] && continue
+        printf 'Value for %s: ' "$VAR"
+        read -rs VALUE || die "Aborted by user."
+        echo ""
+        SECRET_ARGS+=("$VAR=$VALUE")
+    done <<< "$VARS"
+    info "Setting all secrets in one call..."
+    $FLY secrets set CONFIG_TOML="$CONFIG_B64" "${SECRET_ARGS[@]}" --app "$APP_NAME"
+}
+
 do_deploy() {
     info "Deploying..."
     cd "$PROJECT_ROOT"
@@ -88,7 +106,7 @@ case "$CHOICE" in
     1) get_config_path; push_config;              do_deploy ;;
     2) get_config_path;               push_secrets; do_deploy ;;
     3)                                              do_deploy ;;
-    4) get_config_path; push_config;  push_secrets; do_deploy ;;
+    4) get_config_path; push_all;                   do_deploy ;;
     *) die "Invalid choice: $CHOICE" ;;
 esac
 
