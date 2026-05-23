@@ -1,11 +1,14 @@
 package dispatcher_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -188,5 +191,65 @@ func TestSend_LeavesStateUntouchedOnAPIError(t *testing.T) {
 	state, _ := st.GetAlarmState("jessica", "Low", "brandon")
 	if state.LastFiredAt != nil {
 		t.Error("alarm state should not be updated on API error")
+	}
+}
+
+func captureLog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(os.Stderr)
+		log.SetFlags(log.LstdFlags)
+	})
+	return buf
+}
+
+func TestSend_LogsDispatch_Normal(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": 1})
+	}))
+	defer srv.Close()
+
+	buf := captureLog(t)
+	st := newTestStore(t)
+	d := dispatcher.NewWithAPI(srv.URL, "tok", st, "")
+	alarm := config.AlarmConfig{Name: "Low", Priority: "high", Backoff: "30m"}
+	_ = d.Send(dispatcher.SendRequest{
+		Account:   "jessica",
+		AlarmName: "Low",
+		Recipient: "brandon",
+		UserKey:   "ukey",
+		Alarm:     alarm,
+	}, time.Now().UTC())
+
+	got := buf.String()
+	if !strings.Contains(got, `[jessica] alarm "Low" fired → brandon (high)`) {
+		t.Errorf("expected dispatch log line, got: %q", got)
+	}
+}
+
+func TestSend_LogsDispatch_EmergencyWithReceipt(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": 1, "receipt": "rcpt-abc"})
+	}))
+	defer srv.Close()
+
+	buf := captureLog(t)
+	st := newTestStore(t)
+	d := dispatcher.NewWithAPI(srv.URL, "tok", st, "https://example.com/cb")
+	alarm := config.AlarmConfig{Name: "Urgent Low", Priority: "emergency", Retry: "5m", Expire: "2h"}
+	_ = d.Send(dispatcher.SendRequest{
+		Account:   "jessica",
+		AlarmName: "Urgent Low",
+		Recipient: "brandon",
+		UserKey:   "ukey",
+		Alarm:     alarm,
+	}, time.Now().UTC())
+
+	got := buf.String()
+	if !strings.Contains(got, `[jessica] alarm "Urgent Low" fired → brandon (emergency, receipt rcpt-abc)`) {
+		t.Errorf("expected emergency dispatch log with receipt, got: %q", got)
 	}
 }

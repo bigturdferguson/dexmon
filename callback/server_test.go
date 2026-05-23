@@ -3,8 +3,11 @@ package callback_test
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -156,5 +159,52 @@ func TestCallback_IgnoresUnknownReceipt(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 for unknown receipt, got %d", w.Code)
+	}
+}
+
+func captureLog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(os.Stderr)
+		log.SetFlags(log.LstdFlags)
+	})
+	return buf
+}
+
+func TestCallback_LogsAcknowledgment(t *testing.T) {
+	st := newTestStore(t)
+	rid := "receipt-log-test"
+	expires := time.Now().UTC().Add(2 * time.Hour)
+	now := time.Now().UTC()
+	_ = st.UpsertAlarmState(types.AlarmState{
+		Account:          "jessica",
+		AlarmName:        "Urgent Low",
+		Recipient:        "brandon",
+		LastFiredAt:      &now,
+		ReceiptID:        &rid,
+		ReceiptExpiresAt: &expires,
+	})
+
+	buf := captureLog(t)
+
+	srv := callback.New(st, 0)
+	body, _ := json.Marshal(map[string]interface{}{
+		"receipt":         "receipt-log-test",
+		"acknowledged_at": time.Now().Unix(),
+		"snooze":          1800,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/pushover/callback", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	got := buf.String()
+	if !strings.Contains(got, `jessica/"Urgent Low"/brandon acknowledged`) {
+		t.Errorf("expected ack log, got: %q", got)
+	}
+	if !strings.Contains(got, "snoozed") {
+		t.Errorf("expected snooze in ack log, got: %q", got)
 	}
 }

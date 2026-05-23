@@ -71,5 +71,11 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	if payload.Snooze > 0 {
+		snooze := time.Duration(payload.Snooze) * time.Second
+		log.Printf("callback: %s/%q/%s acknowledged, snoozed %s", state.Account, state.AlarmName, state.Recipient, snooze)
+	} else {
+		log.Printf("callback: %s/%q/%s acknowledged", state.Account, state.AlarmName, state.Recipient)
+	}
 	w.WriteHeader(http.StatusOK)
 }

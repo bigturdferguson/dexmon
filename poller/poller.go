@@ -73,6 +73,7 @@ func (p *Poller) Tick() {
 		return
 	}
 	if reading == nil {
+		log.Printf("[%s] poll: no reading returned", p.accountName)
 		return
 	}
 
@@ -82,12 +83,15 @@ func (p *Poller) Tick() {
 		return
 	}
 	if exists {
+		log.Printf("[%s] poll: BG %d %s %s (already seen)", p.accountName, reading.Value, trendArrow(reading.Trend), time.Since(reading.RecordedAt).Round(time.Second))
 		return
 	}
 
 	if err := p.store.InsertReading(*reading); err != nil {
 		log.Fatalf("[%s] insert reading (store fatal): %v", p.accountName, err)
 	}
+
+	log.Printf("[%s] poll: BG %d %s %s", p.accountName, reading.Value, trendArrow(reading.Trend), time.Since(reading.RecordedAt).Round(time.Second))
 
 	p.missCount = 0
 	p.healthAlarmFired = false
@@ -105,6 +109,8 @@ func (p *Poller) Tick() {
 	for _, result := range toRearm {
 		if err := p.store.ClearAlarmRearm(p.accountName, result.AlarmName, result.Recipient); err != nil {
 			log.Printf("[%s] clear alarm rearm: %v", p.accountName, err)
+		} else {
+			log.Printf("[%s] alarm %q rearmed for %s", p.accountName, result.AlarmName, result.Recipient)
 		}
 	}
 

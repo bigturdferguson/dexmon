@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -87,6 +88,12 @@ func (d *Dispatcher) Send(req SendRequest, now time.Time) error {
 	}
 	if result.Status != 1 {
 		return fmt.Errorf("pushover send: API error (status %d)", result.Status)
+	}
+
+	if result.Receipt != "" {
+		log.Printf("[%s] alarm %q fired → %s (%s, receipt %s)", req.Account, req.AlarmName, req.Recipient, req.Alarm.Priority, result.Receipt)
+	} else {
+		log.Printf("[%s] alarm %q fired → %s (%s)", req.Account, req.AlarmName, req.Recipient, req.Alarm.Priority)
 	}
 
 	var receiptID *string

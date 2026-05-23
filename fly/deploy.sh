@@ -8,6 +8,23 @@ info() { printf '\033[0;32m==> \033[0m%s\n' "$*"; }
 warn() { printf '\033[1;33mWARNING:\033[0m %s\n' "$*"; }
 die()  { printf '\033[0;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
+print_app_state() {
+    local callback_url
+    callback_url=$(grep 'callback_url' "$CONFIG_PATH" \
+        | head -1 \
+        | sed "s/.*= *['\"]//;s/['\"].*//" || true)
+    local vars_display
+    vars_display=$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$CONFIG_PATH" \
+        | sed 's/\${//;s/}//' | sort -u | tr '\n' ' ' | sed 's/ $//' || true)
+    echo ""
+    info "App state:"
+    printf '      App:          %s\n' "$APP_NAME"
+    printf '      Config:       %s\n' "$CONFIG_PATH"
+    [ -n "$callback_url" ] && printf '      Callback URL: %s\n' "$callback_url"
+    [ -n "$vars_display" ] && printf '      Secrets:      %s\n' "$vars_display"
+    echo ""
+}
+
 # ── Step 1: check flyctl ─────────────────────────────────────────────────────
 FLY=""
 if command -v fly &>/dev/null; then
@@ -39,6 +56,7 @@ echo "Fly.io regions: https://fly.io/docs/reference/regions/"
 printf 'Primary region [iad]: '
 read -r REGION
 REGION="${REGION:-iad}"
+info "App: $APP_NAME  Region: $REGION"
 
 # ── Step 5: create app ───────────────────────────────────────────────────────
 info "Checking app '$APP_NAME'..."
@@ -69,6 +87,7 @@ read -r CONFIG_INPUT
 CONFIG_INPUT="${CONFIG_INPUT:-./config.toml}"
 CONFIG_PATH="$(cd "$(dirname "$CONFIG_INPUT")" 2>/dev/null && pwd)/$(basename "$CONFIG_INPUT")"
 [ -f "$CONFIG_PATH" ] || die "Config file not found: $CONFIG_INPUT"
+info "Config: $CONFIG_PATH"
 cd "$PROJECT_ROOT"
 
 # ── Step 8: discover and prompt for secrets ──────────────────────────────────
@@ -79,6 +98,8 @@ VARS=$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$CONFIG_PATH" \
 
 if [ -z "$VARS" ]; then
     warn "No \${VAR} references found in config.toml."
+else
+    info "Secrets to set: $(echo "$VARS" | tr '\n' ' ' | sed 's/ $//')"
 fi
 
 SECRET_ARGS=()
@@ -113,7 +134,7 @@ cd "$PROJECT_ROOT"
 $FLY deploy --remote-only --config fly/fly.toml
 
 # ── Step 12: post-deploy instructions ────────────────────────────────────────
-echo ""
+print_app_state
 info "Deployment complete!"
 echo ""
 echo "  App URL: https://$APP_NAME.fly.dev"
