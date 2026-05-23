@@ -1,0 +1,15 @@
+[Unit]
+Description=dexmon CGM alarm daemon
+After=network.target
+
+[Service]
+Type=simple
+User=dexmon
+WorkingDirectory=/opt/dexmon
+ExecStart=/opt/dexmon/dexmon -config /opt/dexmon/config.toml -db /opt/dexmon/dexmon.db
+EnvironmentFile=/opt/dexmon/secrets.env
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

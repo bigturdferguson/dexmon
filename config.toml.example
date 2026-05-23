@@ -1,0 +1,71 @@
+# secrets.env (mode 600, root-only) — referenced by dexmon.service EnvironmentFile:
+#
+#   PUSHOVER_APP_TOKEN=...
+#   PUSHOVER_USER_KEY_BRANDON=...
+#   PUSHOVER_USER_KEY_SARAH=...
+#   PUSHOVER_USER_KEY_JESSICA=...
+#   DEXCOM_USER_JESSICA=...
+#   DEXCOM_PASS_JESSICA=...
+#   HEALTHCHECKS_PING_URL=...
+
+[server]
+callback_port = 8080
+callback_url  = "https://your-domain.com/pushover/callback"
+
+[health]
+  [health.dexcom_timeout]
+  max_missed_readings = 3
+  priority            = "emergency"
+  recipients          = ["brandon"]
+
+  [health.watchdog]
+  ping_url = "${HEALTHCHECKS_PING_URL}"
+
+[recipients]
+  [recipients.brandon]
+  pushover_user_key = "${PUSHOVER_USER_KEY_BRANDON}"
+
+  [recipients.sarah]
+  pushover_user_key = "${PUSHOVER_USER_KEY_SARAH}"
+
+  [recipients.jessica]
+  pushover_user_key = "${PUSHOVER_USER_KEY_JESSICA}"
+
+[accounts]
+  [accounts.jessica]
+  dexcom_username = "${DEXCOM_USER_JESSICA}"
+  dexcom_password = "${DEXCOM_PASS_JESSICA}"
+  poll_interval   = "5m"
+
+  [[accounts.jessica.alarms]]
+  name              = "Severe Low"
+  threshold         = 55
+  direction         = "below"
+  trend             = ["double_up", "single_up", "forty_five_up", "flat",
+                       "forty_five_down", "single_down", "double_down",
+                       "not_computable", "rate_out_of_range", "none"]
+  priority          = "emergency"
+  retry             = "5m"
+  expire            = "2h"
+  rearm_on_recovery = true
+  recipients        = ["brandon", "sarah", "jessica"]
+
+  [[accounts.jessica.alarms]]
+  name              = "Low"
+  threshold         = 70
+  direction         = "below"
+  trend             = ["double_down", "single_down", "forty_five_down"]
+  priority          = "high"
+  backoff           = "30m"
+  rearm_on_recovery = true
+  recipients        = ["brandon", "sarah"]
+
+  [[accounts.jessica.alarms]]
+  name              = "High"
+  threshold         = 250
+  direction         = "above"
+  trend             = ["single_up", "double_up", "forty_five_up"]
+  priority          = "normal"
+  backoff           = "60m"
+  rearm_on_recovery = false
+  recipients        = ["brandon", "sarah"]
