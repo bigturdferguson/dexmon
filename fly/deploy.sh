@@ -84,9 +84,9 @@ fi
 SECRET_ARGS=()
 while IFS= read -r VAR; do
     [ -z "$VAR" ] && continue
-    printf 'Value for %s: ' "$VAR"
-    read -rs VALUE || die "Aborted by user."
-    echo ""
+    printf 'Value for %s: ' "$VAR" >/dev/tty
+    read -rs VALUE < /dev/tty || die "Aborted by user."
+    printf '\n' >/dev/tty
     SECRET_ARGS+=("$VAR=$VALUE")
 done <<< "$VARS"
 
