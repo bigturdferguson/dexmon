@@ -32,7 +32,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("store: %v", err)
 	}
-	defer st.Close()
 
 	disp := dispatcher.New(appToken, st, cfg.Server.CallbackURL)
 
@@ -43,5 +42,8 @@ func main() {
 	}
 
 	srv := callback.New(st, cfg.Server.CallbackPort)
-	log.Fatal(srv.Start())
+	if err := srv.Start(); err != nil {
+		st.Close()
+		log.Fatal(err)
+	}
 }
