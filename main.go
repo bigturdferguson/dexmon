@@ -28,6 +28,8 @@ func main() {
 		log.Fatal("PUSHOVER_APP_TOKEN environment variable is required")
 	}
 
+	logStartup(cfg)
+
 	st, err := store.New(*dbPath)
 	if err != nil {
 		log.Fatalf("store: %v", err)
@@ -45,5 +47,24 @@ func main() {
 	if err := srv.Start(); err != nil {
 		st.Close()
 		log.Fatal(err)
+	}
+}
+
+func logStartup(cfg *config.Config) {
+	if cfg.Server.CallbackURL != "" {
+		log.Printf("config: callback URL: %s", cfg.Server.CallbackURL)
+	} else {
+		log.Printf("config: callback URL: (not set — emergency callbacks disabled)")
+	}
+	for name, acct := range cfg.Accounts {
+		log.Printf("config: account %q polling every %s, %d alarms", name, acct.PollInterval, len(acct.Alarms))
+	}
+	for name := range cfg.Recipients {
+		log.Printf("config: recipient %q configured", name)
+	}
+	if cfg.Health.Watchdog.PingURL != "" {
+		log.Printf("config: watchdog ping URL: %s", cfg.Health.Watchdog.PingURL)
+	} else {
+		log.Printf("config: watchdog ping: (not set)")
 	}
 }

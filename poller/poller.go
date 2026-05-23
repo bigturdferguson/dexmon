@@ -52,6 +52,7 @@ func (p *Poller) Run() {
 		log.Printf("[%s] prune readings: %v", p.accountName, err)
 	}
 	interval, _ := time.ParseDuration(p.cfg.PollInterval)
+	p.Tick()
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for range ticker.C {
