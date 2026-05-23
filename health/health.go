@@ -21,6 +21,7 @@ func PingWatchdog(url string) {
 	}
 	io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
+	log.Printf("watchdog ping ok")
 }
 
 func FireMissedReadingsAlarm(account string, disp *dispatcher.Dispatcher, recipients map[string]config.RecipientConfig, healthCfg config.HealthConfig) {
