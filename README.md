@@ -2,6 +2,14 @@
 
 A long-running Go daemon that polls one or more Dexcom Share CGM accounts, evaluates configurable alarm rules, and delivers per-recipient Pushover notifications. Runs on a Raspberry Pi, any ARM host, or a free-tier cloud instance.
 
+---
+
+## How It Works
+
+dexmon runs a polling loop for each configured Dexcom account. Every `poll_interval`, it fetches the latest CGM reading from the Dexcom Share API. Each reading is evaluated against the account's alarm rules — an alarm fires when the blood glucose value crosses a threshold **and** the current trend matches the configured filter. Fired alarms are dispatched as Pushover notifications at the configured priority. Emergency-priority alarms retry until acknowledged; when a recipient acknowledges from the Pushover app, Pushover POSTs to dexmon's callback URL, which stops retrying and optionally snoozes for that recipient.
+
+---
+
 ## Features
 
 - Multiple Dexcom Share accounts, each with independent alarm rules
@@ -57,6 +65,8 @@ export HEALTHCHECKS_PING_URL=...   # optional
 ## Configuration
 
 All configuration lives in a single TOML file. Secrets are referenced as `${ENV_VAR_NAME}` and are expanded from the environment at startup — the literal `${...}` tokens are never written to the config file.
+
+**Accounts** are the Dexcom Share logins dexmon monitors — one entry per patient. **Recipients** are the people who receive Pushover notifications. They are separate: multiple recipients can watch the same account, and each has independent snooze and backoff state. A recipient who silences an alarm does not affect what others receive.
 
 ### `[server]`
 
@@ -210,138 +220,11 @@ The `<NAME>` suffix in variable names is the token referenced in `config.toml`. 
 
 ## Deployment
 
-### Raspberry Pi (systemd)
-
-1. Build for ARM:
-
-   ```bash
-   GOOS=linux GOARCH=arm64 go build -o dexmon .
-   ```
-
-   Or on the Pi itself: `go build -o dexmon .`
-
-2. Copy files to the host:
-
-   ```bash
-   scp dexmon config.toml pi@yourpi:/opt/dexmon/
-   ```
-
-3. Create a secrets file (mode 600, root-only):
-
-   ```bash
-   sudo tee /opt/dexmon/secrets.env > /dev/null <<EOF
-   PUSHOVER_APP_TOKEN=...
-   PUSHOVER_USER_KEY_BRANDON=...
-   PUSHOVER_USER_KEY_SARAH=...
-   DEXCOM_USER_JESSICA=...
-   DEXCOM_PASS_JESSICA=...
-   HEALTHCHECKS_PING_URL=...
-   EOF
-   sudo chmod 600 /opt/dexmon/secrets.env
-   sudo chown root:root /opt/dexmon/secrets.env
-   ```
-
-4. Create a system user:
-
-   ```bash
-   sudo useradd --system --no-create-home dexmon
-   sudo chown dexmon:dexmon /opt/dexmon
-   ```
-
-5. Install the systemd unit:
-
-   ```bash
-   sudo cp dexmon.service /etc/systemd/system/
-   sudo systemctl daemon-reload
-   sudo systemctl enable --now dexmon
-   ```
-
-6. Check logs:
-
-   ```bash
-   journalctl -u dexmon -f
-   ```
-
-### Pushover Callback (for emergency acknowledgment)
-
-Emergency alarms support acknowledgment and snooze via Pushover callback. Pushover POSTs to `callback_url` when a recipient acknowledges.
-
-To receive callbacks, `callback_url` must be reachable from the internet. Options:
-- **Port forward** port 8080 on your router to the Pi
-- **Reverse proxy** with nginx or Caddy on the Pi
-- **Cloudflare Tunnel** or similar (no open port required)
-
-If you don't configure a callback URL, emergency alarms still fire and retry — they just can't be acknowledged from the Pushover app.
-
-### Fly.io
-
-dexmon ships with scripts for automated Fly.io deployment. The setup script guides first-time Fly.io users from zero to a running instance.
-
-#### Prerequisites
-
-Install `flyctl`:
-
-```bash
-curl -L https://fly.io/install.sh | sh
-```
-
-You'll also need a `config.toml` based on `config.toml.example` with your alarm rules filled in. Secrets (`${VAR}` values) are prompted for by the deploy script — do not put real credentials in the file.
-
-#### Initial deploy
-
-```bash
-./fly/deploy.sh
-```
-
-The script:
-1. Checks for `flyctl` and walks through login if needed
-2. Prompts for an app name (globally unique on Fly.io) and region
-3. Creates the Fly app and a 1 GB persistent volume for the SQLite database
-4. Scans your `config.toml` for `${VAR}` references and prompts for each value
-5. Uploads all secrets (including the encoded config) to Fly's encrypted secret store
-6. Deploys the container
-
-After the first deploy, update `callback_url` in your `config.toml`:
-
-```toml
-[server]
-callback_url = "https://<your-app-name>.fly.dev/pushover/callback"
-```
-
-Then push the updated config:
-
-```bash
-./fly/update.sh   # choose option 1 or 4
-```
-
-#### Updating
-
-```bash
-./fly/update.sh
-```
-
-| Option | What it does |
+| Platform | Guide |
 |---|---|
-| 1. Config file | Re-encode `config.toml`, push as secret, redeploy |
-| 2. Secrets | Re-prompt for `${VAR}` values, push secrets, redeploy |
-| 3. Code only | `fly deploy` — no secret changes |
-| 4. Everything | Config + secrets + redeploy |
-
-#### Optional: GitHub Actions CI/CD
-
-To automatically deploy on every push to `main`:
-
-1. Create a deploy token:
-
-   ```bash
-   fly tokens create deploy -x 999999h
-   ```
-
-2. Add it to your GitHub repo: **Settings → Secrets and variables → Actions → New repository secret**
-   - Name: `FLY_API_TOKEN`
-   - Value: the token from step 1
-
-The workflow file is already at `.github/workflows/fly-deploy.yml`. Before enabling CI/CD, make sure you have run `./fly/deploy.sh` at least once and committed the updated `fly/fly.toml` — it must contain your real app name, not the placeholder. To disable CI/CD, delete the workflow file or remove the `FLY_API_TOKEN` secret.
+| Raspberry Pi (home, always-on) | [guides/raspberry-pi.md](guides/raspberry-pi.md) |
+| Fly.io (cloud, no hardware needed) | [guides/fly-io.md](guides/fly-io.md) |
+| GitHub Actions CI/CD (auto-deploy on push) | [guides/github-actions.md](guides/github-actions.md) |
 
 ---
 
