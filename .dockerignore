@@ -6,3 +6,4 @@ dexmon
 config.toml
 *.service
 fly/
+!fly/entrypoint.sh
