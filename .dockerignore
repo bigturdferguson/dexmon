@@ -1,0 +1,9 @@
+.git
+docs/
+dexmon
+*.db
+*.env
+config.toml
+*.service
+fly/
+!fly/entrypoint.sh

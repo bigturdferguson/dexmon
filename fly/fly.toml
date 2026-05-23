@@ -1,0 +1,15 @@
+app = 'DEXMON_APP_NAME'
+primary_region = 'DEXMON_REGION'
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[mounts]]
+  source = 'dexmon_data'
+  destination = '/data'
