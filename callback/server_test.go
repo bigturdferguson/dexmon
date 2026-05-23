@@ -104,6 +104,44 @@ func TestCallback_SetsSnoozedUntilWhenSnoozeProvided(t *testing.T) {
 	}
 }
 
+func TestCallback_ClearsPreexistingSnoozeOnAckWithoutSnooze(t *testing.T) {
+	st := newTestStore(t)
+	rid := "receipt-789"
+	expires := time.Now().UTC().Add(2 * time.Hour)
+	now := time.Now().UTC()
+	snooze := time.Now().UTC().Add(1 * time.Hour)
+	if err := st.UpsertAlarmState(types.AlarmState{
+		Account:          "jessica",
+		AlarmName:        "Low",
+		Recipient:        "brandon",
+		LastFiredAt:      &now,
+		ReceiptID:        &rid,
+		ReceiptExpiresAt: &expires,
+		SnoozedUntil:     &snooze,
+	}); err != nil {
+		t.Fatalf("seed state: %v", err)
+	}
+
+	srv := callback.New(st, 0)
+	body, _ := json.Marshal(map[string]interface{}{
+		"receipt":         "receipt-789",
+		"acknowledged_at": time.Now().Unix(),
+		"snooze":          0,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/pushover/callback", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	state, _ := st.GetAlarmState("jessica", "Low", "brandon")
+	if state.SnoozedUntil != nil {
+		t.Error("expected pre-existing SnoozedUntil cleared on ack with snooze=0")
+	}
+}
+
 func TestCallback_IgnoresUnknownReceipt(t *testing.T) {
 	st := newTestStore(t)
 	srv := callback.New(st, 0)

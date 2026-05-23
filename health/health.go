@@ -2,6 +2,7 @@ package health
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -18,6 +19,7 @@ func PingWatchdog(url string) {
 		log.Printf("watchdog ping failed: %v", err)
 		return
 	}
+	io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
 }
 

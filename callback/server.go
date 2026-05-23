@@ -62,6 +62,8 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	if payload.Snooze > 0 {
 		snoozedUntil := time.Now().UTC().Add(time.Duration(payload.Snooze) * time.Second)
 		state.SnoozedUntil = &snoozedUntil
+	} else {
+		state.SnoozedUntil = nil
 	}
 
 	if err := s.store.UpsertAlarmState(*state); err != nil {

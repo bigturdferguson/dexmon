@@ -202,6 +202,44 @@ callback_url  = ""
 	}
 }
 
+func TestLoad_RejectsZeroMaxMissedReadings(t *testing.T) {
+	path := writeConfig(t, `
+[server]
+callback_port = 8080
+callback_url  = ""
+
+[health]
+  [health.dexcom_timeout]
+  max_missed_readings = 0
+  priority            = "emergency"
+  recipients          = ["brandon"]
+  [health.watchdog]
+  ping_url = ""
+
+[recipients]
+  [recipients.brandon]
+  pushover_user_key = "ukey"
+
+[accounts]
+  [accounts.jessica]
+  dexcom_username = "u"
+  dexcom_password = "p"
+  poll_interval   = "5m"
+
+  [[accounts.jessica.alarms]]
+  name       = "Low"
+  threshold  = 70
+  direction  = "below"
+  trend      = ["flat"]
+  priority   = "normal"
+  recipients = ["brandon"]
+`)
+	_, err := config.Load(path)
+	if err == nil {
+		t.Fatal("expected error for max_missed_readings=0 with recipients configured, got nil")
+	}
+}
+
 func TestLoad_RejectsEmptyTrend(t *testing.T) {
 	path := writeConfig(t, `
 [server]

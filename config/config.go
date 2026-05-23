@@ -152,5 +152,8 @@ func validate(cfg *Config) error {
 	if p := cfg.Health.DexcomTimeout.Priority; p != "" && p != "emergency" && p != "high" && p != "normal" {
 		return fmt.Errorf("health.dexcom_timeout: priority must be emergency/high/normal, got %q", p)
 	}
+	if len(cfg.Health.DexcomTimeout.Recipients) > 0 && cfg.Health.DexcomTimeout.MaxMissedReadings <= 0 {
+		return fmt.Errorf("health.dexcom_timeout: max_missed_readings must be > 0")
+	}
 	return nil
 }
