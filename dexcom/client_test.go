@@ -67,6 +67,33 @@ func TestFetchLatest_ReturnsReading(t *testing.T) {
 	}
 }
 
+func TestFetchLatest_SlashlessWT(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/ShareWebServices/Services/General/LoginPublisherAccountByName":
+			json.NewEncoder(w).Encode("session-xyz")
+		case "/ShareWebServices/Services/Publisher/ReadPublisherLatestGlucoseValues":
+			json.NewEncoder(w).Encode([]map[string]interface{}{
+				{"WT": "Date(1779564715930)", "Value": 105, "Trend": "Flat"},
+			})
+		}
+	}))
+	defer srv.Close()
+
+	c := dexcom.NewWithBase("user", "pass", srv.URL+"/ShareWebServices/Services")
+	reading, err := c.FetchLatest("noah")
+	if err != nil {
+		t.Fatalf("FetchLatest with slash-less WT: %v", err)
+	}
+	if reading == nil {
+		t.Fatal("expected reading, got nil")
+	}
+	wantTime := time.UnixMilli(1779564715930).UTC()
+	if !reading.RecordedAt.Equal(wantTime) {
+		t.Errorf("RecordedAt: got %v, want %v", reading.RecordedAt, wantTime)
+	}
+}
+
 func TestFetchLatest_ReauthOnSessionExpiry(t *testing.T) {
 	loginCount := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -94,7 +94,7 @@ type dexcomReading struct {
 	Trend string `json:"Trend"`
 }
 
-var dateRe = regexp.MustCompile(`/Date\((\d+)`)
+var dateRe = regexp.MustCompile(`/?Date\((\d+)`)
 
 func (c *Client) fetchLatestRaw(account string) (*types.Reading, error) {
 	url := fmt.Sprintf("%s/Publisher/ReadPublisherLatestGlucoseValues?sessionId=%s&minutes=10&maxCount=1",
