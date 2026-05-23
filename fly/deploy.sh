@@ -42,7 +42,7 @@ REGION="${REGION:-iad}"
 
 # ── Step 5: create app ───────────────────────────────────────────────────────
 info "Checking app '$APP_NAME'..."
-if $FLY apps list 2>/dev/null | grep -qw "$APP_NAME"; then
+if $FLY apps list 2>/dev/null | grep -qE "(^|[[:space:]])${APP_NAME}([[:space:]]|$)"; then
     info "App '$APP_NAME' already exists, skipping creation."
 else
     info "Creating app '$APP_NAME'..."
@@ -67,9 +67,9 @@ echo ""
 printf 'Path to your config.toml [./config.toml]: '
 read -r CONFIG_INPUT
 CONFIG_INPUT="${CONFIG_INPUT:-./config.toml}"
+CONFIG_PATH="$(cd "$(dirname "$CONFIG_INPUT")" 2>/dev/null && pwd)/$(basename "$CONFIG_INPUT")"
+[ -f "$CONFIG_PATH" ] || die "Config file not found: $CONFIG_INPUT"
 cd "$PROJECT_ROOT"
-[ -f "$CONFIG_INPUT" ] || die "Config file not found: $CONFIG_INPUT"
-CONFIG_PATH="$(cd "$(dirname "$CONFIG_INPUT")" && pwd)/$(basename "$CONFIG_INPUT")"
 
 # ── Step 8: discover and prompt for secrets ──────────────────────────────────
 info "Scanning config.toml for required environment variables..."
@@ -81,29 +81,29 @@ if [ -z "$VARS" ]; then
     warn "No \${VAR} references found in config.toml."
 fi
 
-SECRET_ARGS=""
+SECRET_ARGS=()
 while IFS= read -r VAR; do
     [ -z "$VAR" ] && continue
     printf 'Value for %s: ' "$VAR"
-    read -rs VALUE
+    read -rs VALUE || die "Aborted by user."
     echo ""
-    SECRET_ARGS="$SECRET_ARGS $VAR=$VALUE"
+    SECRET_ARGS+=("$VAR=$VALUE")
 done <<< "$VARS"
 
 # ── Step 9: set secrets ──────────────────────────────────────────────────────
 info "Encoding config.toml and setting secrets..."
 CONFIG_B64=$(base64 < "$CONFIG_PATH" | tr -d '\n')
-# shellcheck disable=SC2086
-$FLY secrets set CONFIG_TOML="$CONFIG_B64" $SECRET_ARGS --app "$APP_NAME"
+$FLY secrets set CONFIG_TOML="$CONFIG_B64" "${SECRET_ARGS[@]}" --app "$APP_NAME"
 
 # ── Step 10: substitute placeholders in fly.toml ─────────────────────────────
 FLYTOML="$SCRIPT_DIR/fly.toml"
+[ -f "$FLYTOML" ] || die "fly/fly.toml not found. Run this script from the project root."
 if grep -q 'DEXMON_APP_NAME' "$FLYTOML"; then
     info "Configuring fly/fly.toml..."
     if [ "$(uname)" = "Darwin" ]; then
-        sed -i '' "s/DEXMON_APP_NAME/$APP_NAME/g;s/DEXMON_REGION/$REGION/g" "$FLYTOML"
+        sed -i '' "s|DEXMON_APP_NAME|$APP_NAME|g;s|DEXMON_REGION|$REGION|g" "$FLYTOML"
     else
-        sed -i "s/DEXMON_APP_NAME/$APP_NAME/g;s/DEXMON_REGION/$REGION/g" "$FLYTOML"
+        sed -i "s|DEXMON_APP_NAME|$APP_NAME|g;s|DEXMON_REGION|$REGION|g" "$FLYTOML"
     fi
 fi
 
