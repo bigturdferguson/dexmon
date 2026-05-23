@@ -1,0 +1,5 @@
+.git
+docs/
+dexmon
+*.db
+*.env
