@@ -273,11 +273,75 @@ To receive callbacks, `callback_url` must be reachable from the internet. Option
 
 If you don't configure a callback URL, emergency alarms still fire and retry — they just can't be acknowledged from the Pushover app.
 
-### Free Cloud (Fly.io, Render, Railway)
+### Fly.io
 
-- Set secrets via the provider's secret/env var mechanism
-- Set `callback_url` to the provider's public URL
-- Mount a persistent volume for the SQLite database — ephemeral storage will lose alarm state on restart
+dexmon ships with scripts for automated Fly.io deployment. The setup script guides first-time Fly.io users from zero to a running instance.
+
+#### Prerequisites
+
+Install `flyctl`:
+
+```bash
+curl -L https://fly.io/install.sh | sh
+```
+
+You'll also need a `config.toml` based on `config.toml.example` with your alarm rules filled in. Secrets (`${VAR}` values) are prompted for by the deploy script — do not put real credentials in the file.
+
+#### Initial deploy
+
+```bash
+./fly/deploy.sh
+```
+
+The script:
+1. Checks for `flyctl` and walks through login if needed
+2. Prompts for an app name (globally unique on Fly.io) and region
+3. Creates the Fly app and a 1 GB persistent volume for the SQLite database
+4. Scans your `config.toml` for `${VAR}` references and prompts for each value
+5. Uploads all secrets (including the encoded config) to Fly's encrypted secret store
+6. Deploys the container
+
+After the first deploy, update `callback_url` in your `config.toml`:
+
+```toml
+[server]
+callback_url = "https://<your-app-name>.fly.dev/pushover/callback"
+```
+
+Then push the updated config:
+
+```bash
+./fly/update.sh   # choose option 1 or 4
+```
+
+#### Updating
+
+```bash
+./fly/update.sh
+```
+
+| Option | What it does |
+|---|---|
+| 1. Config file | Re-encode `config.toml`, push as secret, redeploy |
+| 2. Secrets | Re-prompt for `${VAR}` values, push secrets, redeploy |
+| 3. Code only | `fly deploy` — no secret changes |
+| 4. Everything | Config + secrets + redeploy |
+
+#### Optional: GitHub Actions CI/CD
+
+To automatically deploy on every push to `main`:
+
+1. Create a deploy token:
+
+   ```bash
+   fly tokens create deploy -x 999999h
+   ```
+
+2. Add it to your GitHub repo: **Settings → Secrets and variables → Actions → New repository secret**
+   - Name: `FLY_API_TOKEN`
+   - Value: the token from step 1
+
+The workflow file is already at `.github/workflows/fly-deploy.yml`. To disable CI/CD, delete that file or remove the `FLY_API_TOKEN` secret.
 
 ---
 
