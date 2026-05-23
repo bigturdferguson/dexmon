@@ -10,7 +10,9 @@ die()  { printf '\033[0;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
 print_app_state() {
     local callback_url
-    callback_url=$(grep 'callback_url' "$CONFIG_PATH" | sed 's/.*= *"//;s/".*//' || true)
+    callback_url=$(grep 'callback_url' "$CONFIG_PATH" \
+        | head -1 \
+        | sed "s/.*= *['\"]//;s/['\"].*//" || true)
     local vars_display
     vars_display=$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$CONFIG_PATH" \
         | sed 's/\${//;s/}//' | sort -u | tr '\n' ' ' | sed 's/ $//' || true)
