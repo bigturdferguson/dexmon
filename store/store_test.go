@@ -158,6 +158,109 @@ func TestGetAlarmStateByReceiptID(t *testing.T) {
 	}
 }
 
+func TestGetReadings_ReturnsEmptyForNoData(t *testing.T) {
+	s := newTestStore(t)
+	readings, err := s.GetReadings("noah", time.Now().UTC().Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetReadings: %v", err)
+	}
+	if len(readings) != 0 {
+		t.Errorf("expected 0 readings, got %d", len(readings))
+	}
+}
+
+func TestGetReadings_ExcludesReadingsBeforeSince(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+	inWindow := now.Add(-1 * time.Hour)
+	outOfWindow := now.Add(-25 * time.Hour)
+
+	if err := s.InsertReading(types.Reading{Account: "noah", Value: 100, Trend: types.TrendFlat, RecordedAt: inWindow}); err != nil {
+		t.Fatalf("InsertReading: %v", err)
+	}
+	if err := s.InsertReading(types.Reading{Account: "noah", Value: 80, Trend: types.TrendSingleDown, RecordedAt: outOfWindow}); err != nil {
+		t.Fatalf("InsertReading: %v", err)
+	}
+
+	readings, err := s.GetReadings("noah", now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetReadings: %v", err)
+	}
+	if len(readings) != 1 {
+		t.Fatalf("expected 1 reading in window, got %d", len(readings))
+	}
+	if readings[0].Value != 100 {
+		t.Errorf("expected value 100, got %d", readings[0].Value)
+	}
+}
+
+func TestGetReadings_OrderedAscending(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	for _, r := range []types.Reading{
+		{Account: "noah", Value: 120, Trend: types.TrendFlat, RecordedAt: now.Add(-2 * time.Hour)},
+		{Account: "noah", Value: 140, Trend: types.TrendFlat, RecordedAt: now.Add(-1 * time.Hour)},
+		{Account: "noah", Value: 100, Trend: types.TrendFlat, RecordedAt: now.Add(-3 * time.Hour)},
+	} {
+		if err := s.InsertReading(r); err != nil {
+			t.Fatalf("InsertReading: %v", err)
+		}
+	}
+
+	readings, err := s.GetReadings("noah", now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetReadings: %v", err)
+	}
+	if len(readings) != 3 {
+		t.Fatalf("expected 3 readings, got %d", len(readings))
+	}
+	if readings[0].Value != 100 || readings[1].Value != 120 || readings[2].Value != 140 {
+		t.Errorf("readings not in ascending order by time: values=%v", []int{readings[0].Value, readings[1].Value, readings[2].Value})
+	}
+}
+
+func TestGetReadingStats_ReturnsZerosForNoData(t *testing.T) {
+	s := newTestStore(t)
+	min, max, avg, err := s.GetReadingStats("noah", time.Now().UTC().Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetReadingStats: %v", err)
+	}
+	if min != 0 || max != 0 || avg != 0 {
+		t.Errorf("expected all zeros, got min=%d max=%d avg=%d", min, max, avg)
+	}
+}
+
+func TestGetReadingStats_ReturnsCorrectValues(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	for _, r := range []types.Reading{
+		{Account: "noah", Value: 72,  Trend: types.TrendFlat, RecordedAt: now.Add(-3 * time.Hour)},
+		{Account: "noah", Value: 187, Trend: types.TrendFlat, RecordedAt: now.Add(-2 * time.Hour)},
+		{Account: "noah", Value: 129, Trend: types.TrendFlat, RecordedAt: now.Add(-1 * time.Hour)},
+	} {
+		if err := s.InsertReading(r); err != nil {
+			t.Fatalf("InsertReading: %v", err)
+		}
+	}
+
+	min, max, avg, err := s.GetReadingStats("noah", now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetReadingStats: %v", err)
+	}
+	if min != 72 {
+		t.Errorf("expected min=72, got %d", min)
+	}
+	if max != 187 {
+		t.Errorf("expected max=187, got %d", max)
+	}
+	// (72+187+129)/3 = 388/3 = 129 integer
+	if avg != 129 {
+		t.Errorf("expected avg=129, got %d", avg)
+	}
+}
+
 func TestClearAlarmRearm_ClearsLastFiredAndSnooze(t *testing.T) {
 	s := newTestStore(t)
 	now := time.Now().UTC().Truncate(time.Second)

@@ -36,3 +36,39 @@ func (s *Store) CountReadings(account string) (int, error) {
 	err := s.db.QueryRow(`SELECT COUNT(*) FROM readings WHERE account = ?`, account).Scan(&count)
 	return count, err
 }
+
+func (s *Store) GetReadings(account string, since time.Time) ([]types.Reading, error) {
+	rows, err := s.db.Query(
+		`SELECT value, trend, recorded_at FROM readings
+		 WHERE account = ? AND recorded_at >= ?
+		 ORDER BY recorded_at ASC`,
+		account, since.UTC(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var readings []types.Reading
+	for rows.Next() {
+		var r types.Reading
+		var trend string
+		var recordedAt time.Time
+		if err := rows.Scan(&r.Value, &trend, &recordedAt); err != nil {
+			return nil, err
+		}
+		r.Account = account
+		r.Trend = types.Trend(trend)
+		r.RecordedAt = recordedAt.UTC()
+		readings = append(readings, r)
+	}
+	return readings, rows.Err()
+}
+
+func (s *Store) GetReadingStats(account string, since time.Time) (min, max, avg int, err error) {
+	err = s.db.QueryRow(
+		`SELECT COALESCE(MIN(value), 0), COALESCE(MAX(value), 0), COALESCE(CAST(AVG(value) AS INTEGER), 0)
+		 FROM readings WHERE account = ? AND recorded_at >= ?`,
+		account, since.UTC(),
+	).Scan(&min, &max, &avg)
+	return
+}
