@@ -44,6 +44,12 @@ func main() {
 	}
 
 	// Extract the single monitored account for the dashboard.
+	if len(cfg.Accounts) == 0 {
+		log.Fatal("config: at least one account is required")
+	}
+	if len(cfg.Accounts) > 1 {
+		log.Fatal("config: dashboard supports only one account; multiple accounts are not yet supported")
+	}
 	var accountName string
 	var accountAlarms []config.AlarmConfig
 	for name, acct := range cfg.Accounts {
