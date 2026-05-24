@@ -255,13 +255,13 @@
       return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     }
     function bgClass(v) {
-      if (v < 70) return 'bg-low';
-      if (v > 180) return 'bg-high';
+      if (v < lastData.target.low)  return 'bg-low';
+      if (v > lastData.target.high) return 'bg-high';
       return 'bg-normal';
     }
     function bgColor(v) {
-      if (v < 70) return cssVar('--low');
-      if (v > 180) return cssVar('--high');
+      if (v < lastData.target.low)  return cssVar('--low');
+      if (v > lastData.target.high) return cssVar('--high');
       return cssVar('--normal');
     }
     function timeAgo(iso) {
@@ -309,8 +309,8 @@
       });
       const values    = readings.map(r => r.value);
       const ptColors  = readings.map(r => bgColor(r.value));
-      const lowLine   = Array(readings.length).fill(70);
-      const highLine  = Array(readings.length).fill(180);
+      const lowLine   = Array(readings.length).fill(lastData.target.low);
+      const highLine  = Array(readings.length).fill(lastData.target.high);
 
       if (chart) {
         chart.data.labels = labels;
