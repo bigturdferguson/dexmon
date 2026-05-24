@@ -40,7 +40,7 @@ func TestCallback_ClearsReceiptOnAck(t *testing.T) {
 		ReceiptExpiresAt: &expires,
 	})
 
-	srv := callback.New(st, 0, "", nil, nil)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180)
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "receipt-123",
 		"acknowledged_at": time.Now().Unix(),
@@ -77,7 +77,7 @@ func TestCallback_SetsSnoozedUntilWhenSnoozeProvided(t *testing.T) {
 		ReceiptExpiresAt: &expires,
 	})
 
-	srv := callback.New(st, 0, "", nil, nil)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180)
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "receipt-456",
 		"acknowledged_at": time.Now().Unix(),
@@ -125,7 +125,7 @@ func TestCallback_ClearsPreexistingSnoozeOnAckWithoutSnooze(t *testing.T) {
 		t.Fatalf("seed state: %v", err)
 	}
 
-	srv := callback.New(st, 0, "", nil, nil)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180)
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "receipt-789",
 		"acknowledged_at": time.Now().Unix(),
@@ -147,7 +147,7 @@ func TestCallback_ClearsPreexistingSnoozeOnAckWithoutSnooze(t *testing.T) {
 
 func TestCallback_IgnoresUnknownReceipt(t *testing.T) {
 	st := newTestStore(t)
-	srv := callback.New(st, 0, "", nil, nil)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180)
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "unknown-receipt",
@@ -190,7 +190,7 @@ func TestCallback_LogsAcknowledgment(t *testing.T) {
 
 	buf := captureLog(t)
 
-	srv := callback.New(st, 0, "", nil, nil)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180)
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "receipt-log-test",
 		"acknowledged_at": time.Now().Unix(),

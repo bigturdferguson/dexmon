@@ -52,13 +52,16 @@ func main() {
 	}
 	var accountName string
 	var accountAlarms []config.AlarmConfig
+	var targetLow, targetHigh int
 	for name, acct := range cfg.Accounts {
 		accountName = name
 		accountAlarms = acct.Alarms
+		targetLow = acct.TargetLow
+		targetHigh = acct.TargetHigh
 		break
 	}
 
-	srv := callback.New(st, cfg.Server.CallbackPort, accountName, accountAlarms, cfg.Recipients)
+	srv := callback.New(st, cfg.Server.CallbackPort, accountName, accountAlarms, cfg.Recipients, targetLow, targetHigh)
 	if err := srv.Start(); err != nil {
 		st.Close()
 		log.Fatal(err)
