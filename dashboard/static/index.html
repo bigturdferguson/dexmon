@@ -295,9 +295,9 @@
       prevEl.className = 'stat-value' + (prev ? ' ' + bgClass(prev.value) : '');
       document.getElementById('val-prev-age').textContent = prev ? timeAgo(prev.recorded_at) : '';
 
-      document.getElementById('val-high').textContent = d.stats.high || '—';
-      document.getElementById('val-low').textContent  = d.stats.low  || '—';
-      document.getElementById('val-avg').textContent  = d.stats.avg  || '—';
+      document.getElementById('val-high').textContent = d.stats?.high || '—';
+      document.getElementById('val-low').textContent  = d.stats?.low  || '—';
+      document.getElementById('val-avg').textContent  = d.stats?.avg  || '—';
     }
 
     function renderChart(readings) {
@@ -397,7 +397,7 @@
           case 'active':
             statusCell = '<span class="status-active">Active</span>'; break;
           case 'snoozed_until':
-            statusCell = 'Snoozed until ' + fmtTime(a.snoozed_until); break;
+            statusCell = 'Snoozed until ' + esc(fmtTime(a.snoozed_until)); break;
           default: // 'fired'
             statusCell = a.last_fired_at ? timeAgo(a.last_fired_at) : '<span class="text-muted">—</span>';
         }
