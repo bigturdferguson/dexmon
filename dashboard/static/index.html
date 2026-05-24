@@ -134,6 +134,29 @@
       margin-bottom: 1rem;
     }
     .chart-wrap { position: relative; height: 220px; }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .card-header .card-title { margin-bottom: 0; }
+    .window-pills { display: flex; gap: 0.25rem; }
+    .pill {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .pill.active {
+      background: var(--text);
+      border-color: var(--text);
+      color: var(--bg);
+    }
     /* ── Alarm table ── */
     table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     th {
@@ -191,22 +214,30 @@
       <div class="stat-card">
         <div class="stat-label">High</div>
         <div class="stat-value" id="val-high">—</div>
-        <div class="stat-sub">24h</div>
+        <div class="stat-sub" id="sub-high">24h</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Low</div>
         <div class="stat-value" id="val-low">—</div>
-        <div class="stat-sub">24h</div>
+        <div class="stat-sub" id="sub-low">24h</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Avg</div>
         <div class="stat-value" id="val-avg">—</div>
-        <div class="stat-sub">24h</div>
+        <div class="stat-sub" id="sub-avg">24h</div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">BG — Last 24 Hours</div>
+      <div class="card-header">
+        <div class="card-title" id="chart-title">BG — Last 24 Hours</div>
+        <div class="window-pills">
+          <button class="pill" data-window="12h" onclick="setWindow('12h')">12h</button>
+          <button class="pill" data-window="24h" onclick="setWindow('24h')">24h</button>
+          <button class="pill" data-window="7d"  onclick="setWindow('7d')">7d</button>
+          <button class="pill" data-window="30d" onclick="setWindow('30d')">30d</button>
+        </div>
+      </div>
       <div class="chart-wrap"><canvas id="bg-chart"></canvas></div>
     </div>
 
@@ -234,6 +265,7 @@
     let chart = null;
     let lastData = null;
     let lastAsOf = null;
+    let currentWindow = localStorage.getItem('dexmon-window') || '24h';
 
     // ── theme ──────────────────────────────────────────────────────────────
     function applyTheme() {
@@ -249,6 +281,7 @@
       if (lastData) renderChart(lastData.readings || []);
     }
     applyTheme();
+    updateWindowLabels(currentWindow);
 
     // ── helpers ────────────────────────────────────────────────────────────
     function cssVar(name) {
@@ -279,6 +312,33 @@
       return String(s)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;')
         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function chartTitle(w) {
+      const map = {
+        '12h': 'BG — Last 12 Hours',
+        '24h': 'BG — Last 24 Hours',
+        '7d':  'BG — Last 7 Days',
+        '30d': 'BG — Last 30 Days',
+      };
+      return map[w] || 'BG — Last 24 Hours';
+    }
+
+    function updateWindowLabels(w) {
+      ['high', 'low', 'avg'].forEach(id => {
+        document.getElementById('sub-' + id).textContent = w;
+      });
+      document.getElementById('chart-title').textContent = chartTitle(w);
+      document.querySelectorAll('.pill').forEach(b => {
+        b.classList.toggle('active', b.dataset.window === w);
+      });
+    }
+
+    function setWindow(w) {
+      currentWindow = w;
+      localStorage.setItem('dexmon-window', w);
+      if (chart) { chart.destroy(); chart = null; }
+      fetchAndRender();
     }
 
     // ── render ─────────────────────────────────────────────────────────────
@@ -418,7 +478,7 @@
     // ── fetch / refresh ────────────────────────────────────────────────────
     async function fetchAndRender() {
       try {
-        const resp = await fetch('/api/dashboard');
+        const resp = await fetch('/api/dashboard?window=' + currentWindow);
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const d = await resp.json();
         lastData = d;
@@ -427,6 +487,7 @@
         renderChart(d.readings || []);
         renderAlarms(d.alarms || []);
         updateLastUpdated();
+        updateWindowLabels(d.window || '24h');
         const el = document.getElementById('last-updated');
         el.className = '';
       } catch (e) {
