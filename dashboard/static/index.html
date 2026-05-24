@@ -281,7 +281,6 @@
       if (lastData) renderChart(lastData.readings || []);
     }
     applyTheme();
-    updateWindowLabels(currentWindow);
 
     // ── helpers ────────────────────────────────────────────────────────────
     function cssVar(name) {
@@ -497,6 +496,7 @@
       }
     }
 
+    updateWindowLabels(currentWindow);
     fetchAndRender();
     setInterval(fetchAndRender, REFRESH_MS);
     setInterval(updateLastUpdated, 60 * 1000);
