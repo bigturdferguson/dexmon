@@ -36,6 +36,8 @@ callback_url  = "https://your-domain.com/pushover/callback"
   dexcom_username = "${DEXCOM_USER_JESSICA}"
   dexcom_password = "${DEXCOM_PASS_JESSICA}"
   poll_interval   = "5m"
+  target_low      = 70   # optional — dashboard color coding lower bound (default 70)
+  target_high     = 180  # optional — dashboard color coding upper bound (default 180)
 
   [[accounts.jessica.alarms]]
   name              = "Severe Low"
