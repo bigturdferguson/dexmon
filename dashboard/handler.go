@@ -14,10 +14,17 @@ import (
 //go:embed static
 var staticFS embed.FS
 
+// TargetJSON holds the target glucose range.
+type TargetJSON struct {
+	Low  int `json:"low"`
+	High int `json:"high"`
+}
+
 // DashboardResponse is the JSON shape returned by GET /api/dashboard.
 type DashboardResponse struct {
 	Account  string        `json:"account"`
 	AsOf     time.Time     `json:"as_of"`
+	Target   TargetJSON    `json:"target"`
 	Current  *ReadingJSON  `json:"current"`
 	Previous *ReadingJSON  `json:"previous"`
 	Stats    StatsJSON     `json:"stats"`
@@ -58,12 +65,14 @@ type Handler struct {
 	account    string
 	alarms     []config.AlarmConfig
 	recipients map[string]config.RecipientConfig // reserved for future recipient-name display
+	targetLow  int
+	targetHigh int
 }
 
 // New constructs a Handler. Pass the single monitored account name and its
 // alarm configs so the API can return per-alarm status.
-func New(st *store.Store, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig) *Handler {
-	return &Handler{store: st, account: account, alarms: alarms, recipients: recipients}
+func New(st *store.Store, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int) *Handler {
+	return &Handler{store: st, account: account, alarms: alarms, recipients: recipients, targetLow: targetLow, targetHigh: targetHigh}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -109,6 +118,7 @@ func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request) {
 	resp := DashboardResponse{
 		Account:  h.account,
 		AsOf:     now,
+		Target:   TargetJSON{Low: h.targetLow, High: h.targetHigh},
 		Stats:    StatsJSON{High: maxVal, Low: minVal, Avg: avgVal},
 		Readings: toReadingJSON(readings),
 		Alarms:   h.buildAlarmList(now),

@@ -33,7 +33,7 @@ func get(t *testing.T, h http.Handler, path string) *httptest.ResponseRecorder {
 
 func TestDashboardAPI_EmptyData(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
 	w := get(t, h, "/api/dashboard")
 
 	if w.Code != http.StatusOK {
@@ -82,7 +82,7 @@ func TestDashboardAPI_PopulatedData(t *testing.T) {
 		}
 	}
 
-	h := dashboard.New(s, "noah", nil, nil)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -112,7 +112,7 @@ func TestDashboardAPI_AlarmStatus_NeverFired(t *testing.T) {
 	alarms := []config.AlarmConfig{{Name: "Low", Priority: "high", Recipients: []string{"brandon"}}}
 	recipients := map[string]config.RecipientConfig{"brandon": {PushoverUserKey: "key"}}
 
-	h := dashboard.New(s, "noah", alarms, recipients)
+	h := dashboard.New(s, "noah", alarms, recipients, 70, 180)
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -146,7 +146,7 @@ func TestDashboardAPI_AlarmStatus_Active(t *testing.T) {
 	})
 
 	alarms := []config.AlarmConfig{{Name: "Urgent Low", Priority: "emergency", Recipients: []string{"brandon"}}}
-	h := dashboard.New(s, "noah", alarms, nil)
+	h := dashboard.New(s, "noah", alarms, nil, 70, 180)
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -175,7 +175,7 @@ func TestDashboardAPI_AlarmStatus_SnoozedUntil(t *testing.T) {
 	})
 
 	alarms := []config.AlarmConfig{{Name: "High", Priority: "high", Recipients: []string{"brandon"}}}
-	h := dashboard.New(s, "noah", alarms, nil)
+	h := dashboard.New(s, "noah", alarms, nil, 70, 180)
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -202,7 +202,7 @@ func TestDashboardAPI_AlarmStatus_Fired(t *testing.T) {
 	})
 
 	alarms := []config.AlarmConfig{{Name: "Low", Priority: "high", Recipients: []string{"brandon"}}}
-	h := dashboard.New(s, "noah", alarms, nil)
+	h := dashboard.New(s, "noah", alarms, nil, 70, 180)
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -236,7 +236,7 @@ func TestDashboardAPI_MultiRecipient_MostConcerningStatusWins(t *testing.T) {
 	alarms := []config.AlarmConfig{
 		{Name: "Low", Priority: "emergency", Recipients: []string{"alice", "brandon"}},
 	}
-	h := dashboard.New(s, "noah", alarms, nil)
+	h := dashboard.New(s, "noah", alarms, nil, 70, 180)
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -251,7 +251,7 @@ func TestDashboardAPI_MultiRecipient_MostConcerningStatusWins(t *testing.T) {
 
 func TestDashboardIndex_ServesHTML(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
 	w := get(t, h, "/")
 
 	if w.Code != http.StatusOK {
@@ -259,5 +259,22 @@ func TestDashboardIndex_ServesHTML(t *testing.T) {
 	}
 	if ct := w.Header().Get("Content-Type"); ct != "text/html; charset=utf-8" {
 		t.Errorf("expected text/html content-type, got %q", ct)
+	}
+}
+
+func TestDashboardAPI_TargetRange(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 80, 140)
+	w := get(t, h, "/api/dashboard")
+
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Target.Low != 80 {
+		t.Errorf("expected Target.Low=80, got %d", resp.Target.Low)
+	}
+	if resp.Target.High != 140 {
+		t.Errorf("expected Target.High=140, got %d", resp.Target.High)
 	}
 }
