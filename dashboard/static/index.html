@@ -1,1 +1,443 @@
-<!DOCTYPE html><html><body>dashboard</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dexmon</title>
+  <script>
+    (function() {
+      if (localStorage.getItem('dexmon-theme') === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+  <script src="/chart.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --low: #dc2626;
+      --high: #d97706;
+      --normal: #16a34a;
+      --low-line: rgba(220,38,38,0.45);
+      --high-line: rgba(217,119,6,0.45);
+      --grid: rgba(100,116,139,0.12);
+      --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .dark {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 1.5rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h1 { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; }
+    .header-right { display: flex; align-items: center; gap: 0.875rem; }
+    #last-updated { font-size: 0.8rem; color: var(--text-muted); }
+    #theme-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 0.375rem;
+      padding: 0.25rem 0.625rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    /* ── Layout ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 1.25rem 1.5rem; }
+    /* ── Stat grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      gap: 0.875rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .stat-current { grid-column: 1 / -1; }
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.125rem;
+      box-shadow: var(--shadow);
+    }
+    .stat-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .stat-value {
+      font-size: 2.25rem;
+      font-weight: 700;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-card:not(.stat-current) .stat-value { font-size: 1.75rem; }
+    .stat-sub {
+      margin-top: 0.3rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .trend { font-size: 1.2rem; }
+    /* BG color classes */
+    .bg-low    { color: var(--low); }
+    .bg-high   { color: var(--high); }
+    .bg-normal { color: var(--normal); }
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.125rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.25rem;
+    }
+    .card-title {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .chart-wrap { position: relative; height: 220px; }
+    /* ── Alarm table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th {
+      text-align: left;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 9999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-emergency { background: rgba(220,38,38,0.1);  color: var(--low); }
+    .badge-high      { background: rgba(217,119,6,0.1);  color: var(--high); }
+    .badge-normal    { background: rgba(22,163,74,0.1);  color: var(--normal); }
+    .status-active { color: var(--low); font-weight: 600; }
+    .text-muted { color: var(--text-muted); }
+    .update-error { color: var(--high); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>dexmon</h1>
+    <div class="header-right">
+      <span id="last-updated">Loading…</span>
+      <button id="theme-btn" onclick="toggleTheme()">☀︎</button>
+    </div>
+  </header>
+  <main>
+    <div class="stats-grid">
+      <div class="stat-card stat-current">
+        <div class="stat-label">Current BG</div>
+        <div class="stat-value" id="val-current">—</div>
+        <div class="stat-sub">
+          <span class="trend" id="val-trend"></span>
+          <span id="val-current-age"></span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Previous</div>
+        <div class="stat-value" id="val-prev">—</div>
+        <div class="stat-sub" id="val-prev-age"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">High</div>
+        <div class="stat-value" id="val-high">—</div>
+        <div class="stat-sub">24h</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Low</div>
+        <div class="stat-value" id="val-low">—</div>
+        <div class="stat-sub">24h</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg</div>
+        <div class="stat-value" id="val-avg">—</div>
+        <div class="stat-sub">24h</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">BG — Last 24 Hours</div>
+      <div class="chart-wrap"><canvas id="bg-chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Alarms</div>
+      <table>
+        <thead>
+          <tr><th>Alarm</th><th>Priority</th><th>Last Fired</th><th>Status</th></tr>
+        </thead>
+        <tbody id="alarm-rows">
+          <tr><td colspan="4" class="text-muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const REFRESH_MS = 5 * 60 * 1000;
+    const TREND_ARROW = {
+      double_up: '↑↑', single_up: '↑', forty_five_up: '↗',
+      flat: '→',
+      forty_five_down: '↘', single_down: '↓', double_down: '↓↓',
+    };
+
+    let chart = null;
+    let lastData = null;
+    let lastAsOf = null;
+
+    // ── theme ──────────────────────────────────────────────────────────────
+    function applyTheme() {
+      const dark = document.documentElement.classList.contains('dark');
+      document.getElementById('theme-btn').textContent = dark ? '☾' : '☀︎';
+    }
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      const dark = document.documentElement.classList.contains('dark');
+      localStorage.setItem('dexmon-theme', dark ? 'dark' : 'light');
+      applyTheme();
+      if (chart) { chart.destroy(); chart = null; }
+      if (lastData) renderChart(lastData.readings || []);
+    }
+    applyTheme();
+
+    // ── helpers ────────────────────────────────────────────────────────────
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    function bgClass(v) {
+      if (v < 70) return 'bg-low';
+      if (v > 180) return 'bg-high';
+      return 'bg-normal';
+    }
+    function bgColor(v) {
+      if (v < 70) return cssVar('--low');
+      if (v > 180) return cssVar('--high');
+      return cssVar('--normal');
+    }
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const s = Math.floor((Date.now() - new Date(iso)) / 1000);
+      if (s < 60)    return s + 's ago';
+      if (s < 3600)  return Math.floor(s / 60) + 'm ago';
+      if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+      return Math.floor(s / 86400) + 'd ago';
+    }
+    function fmtTime(iso) {
+      return new Date(iso).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    }
+    function esc(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── render ─────────────────────────────────────────────────────────────
+    function renderWidgets(d) {
+      const cur = d.current, prev = d.previous;
+      const curEl = document.getElementById('val-current');
+      curEl.textContent = cur ? cur.value : '—';
+      curEl.className = 'stat-value' + (cur ? ' ' + bgClass(cur.value) : '');
+      document.getElementById('val-trend').textContent = cur ? (TREND_ARROW[cur.trend] || '') : '';
+      document.getElementById('val-current-age').textContent = cur ? timeAgo(cur.recorded_at) : '';
+
+      const prevEl = document.getElementById('val-prev');
+      prevEl.textContent = prev ? prev.value : '—';
+      prevEl.className = 'stat-value' + (prev ? ' ' + bgClass(prev.value) : '');
+      document.getElementById('val-prev-age').textContent = prev ? timeAgo(prev.recorded_at) : '';
+
+      document.getElementById('val-high').textContent = d.stats.high || '—';
+      document.getElementById('val-low').textContent  = d.stats.low  || '—';
+      document.getElementById('val-avg').textContent  = d.stats.avg  || '—';
+    }
+
+    function renderChart(readings) {
+      if (!readings.length) return;
+      const labels = readings.map(r => {
+        const dt = new Date(r.recorded_at);
+        return dt.getHours().toString().padStart(2,'0') + ':' +
+               dt.getMinutes().toString().padStart(2,'0');
+      });
+      const values    = readings.map(r => r.value);
+      const ptColors  = readings.map(r => bgColor(r.value));
+      const lowLine   = Array(readings.length).fill(70);
+      const highLine  = Array(readings.length).fill(180);
+
+      if (chart) {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.data.datasets[0].pointBackgroundColor = ptColors;
+        chart.data.datasets[1].data = lowLine;
+        chart.data.datasets[2].data = highLine;
+        chart.update('none');
+        return;
+      }
+
+      const ctx = document.getElementById('bg-chart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              data: values,
+              borderColor: '#6366f1',
+              borderWidth: 2,
+              pointBackgroundColor: ptColors,
+              pointRadius: readings.length > 60 ? 2 : 3,
+              tension: 0.3,
+              fill: false,
+            },
+            {
+              data: lowLine,
+              borderColor: cssVar('--low-line'),
+              borderWidth: 1,
+              borderDash: [5, 4],
+              pointRadius: 0,
+              fill: false,
+            },
+            {
+              data: highLine,
+              borderColor: cssVar('--high-line'),
+              borderWidth: 1,
+              borderDash: [5, 4],
+              pointRadius: 0,
+              fill: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              filter: item => item.datasetIndex === 0,
+              callbacks: { label: ctx => 'BG: ' + ctx.parsed.y },
+            },
+          },
+          scales: {
+            x: {
+              grid: { color: cssVar('--grid') },
+              ticks: { color: cssVar('--text-muted'), maxTicksLimit: 8, maxRotation: 0 },
+            },
+            y: {
+              suggestedMin: 40,
+              grid: { color: cssVar('--grid') },
+              ticks: { color: cssVar('--text-muted') },
+            },
+          },
+        },
+      });
+    }
+
+    function renderAlarms(alarms) {
+      const tbody = document.getElementById('alarm-rows');
+      if (!alarms || !alarms.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-muted">No alarms configured.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = alarms.map(a => {
+        const badge = `<span class="badge badge-${esc(a.priority)}">${esc(a.priority)}</span>`;
+        const lastFiredCell = a.last_fired_at ? timeAgo(a.last_fired_at) : '<span class="text-muted">—</span>';
+        let statusCell;
+        switch (a.status) {
+          case 'never_fired':
+            statusCell = '<span class="text-muted">—</span>'; break;
+          case 'active':
+            statusCell = '<span class="status-active">Active</span>'; break;
+          case 'snoozed_until':
+            statusCell = 'Snoozed until ' + fmtTime(a.snoozed_until); break;
+          default: // 'fired'
+            statusCell = a.last_fired_at ? timeAgo(a.last_fired_at) : '<span class="text-muted">—</span>';
+        }
+        return `<tr>
+          <td>${esc(a.name)}</td>
+          <td>${badge}</td>
+          <td>${lastFiredCell}</td>
+          <td>${statusCell}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function updateLastUpdated() {
+      if (!lastAsOf) return;
+      document.getElementById('last-updated').textContent = 'Last updated: ' + timeAgo(lastAsOf);
+    }
+
+    // ── fetch / refresh ────────────────────────────────────────────────────
+    async function fetchAndRender() {
+      try {
+        const resp = await fetch('/api/dashboard');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const d = await resp.json();
+        lastData = d;
+        lastAsOf = d.as_of;
+        renderWidgets(d);
+        renderChart(d.readings || []);
+        renderAlarms(d.alarms || []);
+        updateLastUpdated();
+        const el = document.getElementById('last-updated');
+        el.className = '';
+      } catch (e) {
+        const el = document.getElementById('last-updated');
+        el.textContent = 'Update failed';
+        el.className = 'update-error';
+      }
+    }
+
+    fetchAndRender();
+    setInterval(fetchAndRender, REFRESH_MS);
+    setInterval(updateLastUpdated, 60 * 1000);
+  </script>
+</body>
+</html>
