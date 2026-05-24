@@ -60,7 +60,7 @@ cp config.toml.example config.toml
 
 Open `config.toml` and fill in your alarm rules, thresholds, and recipient names. Leave all `${VARIABLE_NAME}` placeholders exactly as they are — **do not replace them with real credentials**.
 
-> **How `${VAR}` placeholders work:** Every credential in `config.toml` is written as `${VARIABLE_NAME}` — a placeholder, never the real value. The deploy script scans the file, finds each placeholder, and prompts you for the actual value. Your credentials go directly into Fly's encrypted secret store and never touch your disk. You type each value once at the prompt; that's it.
+> **How `${VAR}` placeholders work:** Every credential in `config.toml` is written as `${VARIABLE_NAME}` — a placeholder, never the real value. The deploy script scans the file, finds each placeholder, and prompts you for the actual value. Your credentials go directly into Fly's encrypted secret store and never touch your disk. You type each value once at the prompt; that's it. This also means you can safely commit or share `config.toml` without exposing any secrets.
 
 Leave `callback_url = ""` for now — you will fill this in after the first deploy.
 
@@ -98,10 +98,9 @@ The script finds every `${VAR}` placeholder in your `config.toml` and asks for i
 Value for PUSHOVER_APP_TOKEN (NEW — required):
 ```
 
-A few things to know:
-- **Nothing appears as you type — this is normal.** Input is hidden to protect your credentials.
-- Paste or type the value and press Enter.
-- Each prompt name tells you exactly which credential is needed:
+> **Nothing appears as you type — this is normal.** Input is hidden to protect your credentials. Paste or type the value and press Enter.
+
+Each prompt name tells you exactly which credential is needed:
 
 | Prompt | What to enter |
 |--------|--------------|
@@ -115,7 +114,9 @@ After all prompts, the script creates the Fly app, provisions a 1 GB persistent 
 
 ### 4. Set the callback URL
 
-After the first deploy your app is live at `https://<appname>.fly.dev`. Open `config.toml` and update:
+> Complete Step 3 first — the app must finish deploying before you have a URL to set.
+
+After the first deploy your app is live at `https://<appname>.fly.dev`. Open `config.toml` and update — replacing `<appname>` with the name you chose in Step 3 (for example, `dexmon-noah`):
 
 ```toml
 [server]
@@ -212,7 +213,7 @@ Define one entry per person who can receive notifications.
 
 | Key | Description |
 |---|---|
-| `pushover_user_key` | Pushover user key for this recipient (from pushover.net → Your Profile) |
+| `pushover_user_key` | Pushover user key for this recipient — shown at the top of pushover.net after logging in |
 
 Recipient names are referenced by `recipients = [...]` in alarms. The name is arbitrary — it just needs to match consistently.
 
