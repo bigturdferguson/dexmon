@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"dexmon/config"
+	"dexmon/dashboard"
 	"dexmon/store"
 )
 
@@ -16,8 +18,11 @@ type Server struct {
 	mux   *http.ServeMux
 }
 
-func New(store *store.Store, port int) *Server {
-	s := &Server{store: store, port: port, mux: http.NewServeMux()}
+func New(st *store.Store, port int, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig) *Server {
+	s := &Server{store: st, port: port, mux: http.NewServeMux()}
+	dash := dashboard.New(st, account, alarms, recipients)
+	s.mux.Handle("GET /", dash)
+	s.mux.Handle("GET /api/dashboard", dash)
 	s.mux.HandleFunc("POST /pushover/callback", s.handleCallback)
 	return s
 }
@@ -35,7 +40,7 @@ func (s *Server) Start() error {
 type callbackPayload struct {
 	Receipt        string `json:"receipt"`
 	AcknowledgedAt int64  `json:"acknowledged_at"`
-	Snooze         int    `json:"snooze"` // seconds; 0 means no snooze
+	Snooze         int    `json:"snooze"`
 }
 
 func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {

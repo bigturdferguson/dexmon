@@ -43,7 +43,16 @@ func main() {
 		go p.Run()
 	}
 
-	srv := callback.New(st, cfg.Server.CallbackPort)
+	// Extract the single monitored account for the dashboard.
+	var accountName string
+	var accountAlarms []config.AlarmConfig
+	for name, acct := range cfg.Accounts {
+		accountName = name
+		accountAlarms = acct.Alarms
+		break
+	}
+
+	srv := callback.New(st, cfg.Server.CallbackPort, accountName, accountAlarms, cfg.Recipients)
 	if err := srv.Start(); err != nil {
 		st.Close()
 		log.Fatal(err)
