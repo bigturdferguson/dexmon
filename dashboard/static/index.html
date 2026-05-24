@@ -340,6 +340,55 @@
       fetchAndRender();
     }
 
+    function chartLabel(isoStr, w) {
+      const dt = new Date(isoStr);
+      if (w === '12h' || w === '24h') {
+        return dt.getMinutes() === 0
+          ? dt.getHours().toString().padStart(2, '0') + ':00'
+          : '';
+      }
+      if (w === '7d') {
+        return (dt.getHours() === 0 && dt.getMinutes() === 0)
+          ? dt.toLocaleDateString([], { weekday: 'short' })
+          : '';
+      }
+      // 30d: label ~every 5 days at midnight to avoid mobile density overflow
+      return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 5 === 1)
+        ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
+        : '';
+    }
+
+    function isMinorTick(isoStr, w) {
+      const dt = new Date(isoStr);
+      if (w === '12h' || w === '24h') return dt.getMinutes() === 30;
+      // 7d and 30d: noon mark (halfway through each day)
+      return dt.getHours() === 12 && dt.getMinutes() === 0;
+    }
+
+    const rulerPlugin = {
+      id: 'ruler',
+      afterDraw(chart) {
+        const xScale = chart.scales.x;
+        const rds = chart._rulerReadings;
+        const w   = chart._rulerWindow;
+        if (!rds || !w) return;
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.strokeStyle = cssVar('--text-muted');
+        ctx.lineWidth = 1;
+        rds.forEach((r, i) => {
+          if (!isMinorTick(r.recorded_at, w)) return;
+          const x = xScale.getPixelForValue(i);
+          const y = xScale.bottom;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + 4);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+    };
+
     // ── render ─────────────────────────────────────────────────────────────
     function renderWidgets(d) {
       const cur = d.current, prev = d.previous;
@@ -361,17 +410,15 @@
 
     function renderChart(readings) {
       if (!readings.length) return;
-      const labels = readings.map(r => {
-        const dt = new Date(r.recorded_at);
-        return dt.getHours().toString().padStart(2,'0') + ':' +
-               dt.getMinutes().toString().padStart(2,'0');
-      });
+      const labels = readings.map(r => chartLabel(r.recorded_at, currentWindow));
       const values    = readings.map(r => r.value);
       const ptColors  = readings.map(r => bgColor(r.value));
       const lowLine   = Array(readings.length).fill(lastData.target.low);
       const highLine  = Array(readings.length).fill(lastData.target.high);
 
       if (chart) {
+        chart._rulerWindow   = currentWindow;
+        chart._rulerReadings = readings;
         chart.data.labels = labels;
         chart.data.datasets[0].data = values;
         chart.data.datasets[0].pointBackgroundColor = ptColors;
@@ -384,6 +431,7 @@
       const ctx = document.getElementById('bg-chart').getContext('2d');
       chart = new Chart(ctx, {
         type: 'line',
+        plugins: [rulerPlugin],
         data: {
           labels,
           datasets: [
@@ -428,7 +476,15 @@
           scales: {
             x: {
               grid: { color: cssVar('--grid') },
-              ticks: { color: cssVar('--text-muted'), maxTicksLimit: 8, maxRotation: 0 },
+              ticks: {
+                color: cssVar('--text-muted'),
+                autoSkip: false,
+                maxRotation: 0,
+                callback: function(val, i) {
+                  const label = chartLabel(this.chart._rulerReadings?.[i]?.recorded_at, this.chart._rulerWindow);
+                  return label || null;
+                },
+              },
             },
             y: {
               suggestedMin: 40,
@@ -438,6 +494,8 @@
           },
         },
       });
+      chart._rulerWindow   = currentWindow;
+      chart._rulerReadings = readings;
     }
 
     function renderAlarms(alarms) {
