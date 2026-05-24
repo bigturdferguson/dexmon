@@ -481,7 +481,7 @@
                 autoSkip: false,
                 maxRotation: 0,
                 callback: function(val) {
-                  return val || null;
+                  return this.getLabelForValue(val) || null;
                 },
               },
             },
