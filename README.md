@@ -15,7 +15,7 @@ The dashboard is available at `https://<appname>.fly.dev/` and auto-refreshes ev
 | High | Maximum BG over the last 24 hours |
 | Low | Minimum BG over the last 24 hours |
 | Avg | Integer average BG over the last 24 hours |
-| BG Graph | 24-hour line chart with a shaded 70–180 target range |
+| BG Graph | 24-hour line chart with a shaded target range band |
 | Alarms | Per-alarm name, priority, last fired time, and current status |
 
 Supports light and dark themes — toggle with the button in the header. Preference is saved across page loads.
@@ -227,6 +227,8 @@ Define one entry per Dexcom Share account to monitor.
   dexcom_username = "${DEXCOM_USER_JESSICA}"
   dexcom_password = "${DEXCOM_PASS_JESSICA}"
   poll_interval   = "5m"
+  target_low      = 70   # optional, default 70
+  target_high     = 180  # optional, default 180
 ```
 
 | Key | Description |
@@ -234,6 +236,8 @@ Define one entry per Dexcom Share account to monitor.
 | `dexcom_username` | Dexcom Share login email |
 | `dexcom_password` | Dexcom Share login password |
 | `poll_interval` | How often to poll for a new reading. Go duration string: `5m`, `3m`, etc. Dexcom updates every 5 minutes. |
+| `target_low` | Lower bound of the target BG range (mg/dL). Controls dashboard color coding and chart band. Default: `70`. |
+| `target_high` | Upper bound of the target BG range (mg/dL). Controls dashboard color coding and chart band. Default: `180`. |
 
 ### `[[accounts.<name>.alarms]]`
 
