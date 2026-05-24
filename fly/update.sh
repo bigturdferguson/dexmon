@@ -71,6 +71,37 @@ push_config() {
     $FLY secrets set CONFIG_TOML="$CONFIG_B64" --app "$APP_NAME"
 }
 
+get_existing_secrets() {
+    $FLY secrets list --app "$APP_NAME" 2>/dev/null | awk 'NR>1 {print $1}' | sort
+}
+
+prompt_secrets() {
+    local vars="$1"
+    local existing="$2"
+    SECRET_ARGS=()
+    while IFS= read -r VAR; do
+        [ -z "$VAR" ] && continue
+        if echo "$existing" | grep -qx "$VAR"; then
+            printf 'Value for %s (already set — leave blank to keep): ' "$VAR" >/dev/tty
+            read -rs VALUE < /dev/tty || die "Aborted by user."
+            printf '\n' >/dev/tty
+            if [ -z "$VALUE" ]; then
+                info "Keeping existing $VAR"
+                continue
+            fi
+        else
+            while true; do
+                printf 'Value for %s (NEW — required): ' "$VAR" >/dev/tty
+                read -rs VALUE < /dev/tty || die "Aborted by user."
+                printf '\n' >/dev/tty
+                [ -n "$VALUE" ] && break
+                printf 'Value required for new secret %s. Try again.\n' "$VAR" >/dev/tty
+            done
+        fi
+        SECRET_ARGS+=("$VAR=$VALUE")
+    done <<< "$vars"
+}
+
 push_secrets() {
     info "Scanning config.toml for environment variables..."
     VARS=$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$CONFIG_PATH" \
@@ -79,18 +110,8 @@ push_secrets() {
     if [ -n "$VARS" ]; then
         info "Secrets to review: $(echo "$VARS" | tr '\n' ' ' | sed 's/ $//')"
     fi
-    SECRET_ARGS=()
-    while IFS= read -r VAR; do
-        [ -z "$VAR" ] && continue
-        printf 'Value for %s (leave blank to keep existing): ' "$VAR" >/dev/tty
-        read -rs VALUE < /dev/tty || die "Aborted by user."
-        printf '\n' >/dev/tty
-        if [ -z "$VALUE" ]; then
-            info "Skipping $VAR (no value entered)"
-            continue
-        fi
-        SECRET_ARGS+=("$VAR=$VALUE")
-    done <<< "$VARS"
+    EXISTING=$(get_existing_secrets)
+    prompt_secrets "$VARS" "$EXISTING"
     if [ "${#SECRET_ARGS[@]}" -gt 0 ]; then
         $FLY secrets set "${SECRET_ARGS[@]}" --app "$APP_NAME"
     fi
@@ -105,18 +126,8 @@ push_all() {
     if [ -n "$VARS" ]; then
         info "Secrets to review: $(echo "$VARS" | tr '\n' ' ' | sed 's/ $//')"
     fi
-    SECRET_ARGS=()
-    while IFS= read -r VAR; do
-        [ -z "$VAR" ] && continue
-        printf 'Value for %s (leave blank to keep existing): ' "$VAR" >/dev/tty
-        read -rs VALUE < /dev/tty || die "Aborted by user."
-        printf '\n' >/dev/tty
-        if [ -z "$VALUE" ]; then
-            info "Skipping $VAR (no value entered)"
-            continue
-        fi
-        SECRET_ARGS+=("$VAR=$VALUE")
-    done <<< "$VARS"
+    EXISTING=$(get_existing_secrets)
+    prompt_secrets "$VARS" "$EXISTING"
     info "Setting all secrets in one call..."
     $FLY secrets set CONFIG_TOML="$CONFIG_B64" "${SECRET_ARGS[@]}" --app "$APP_NAME"
 }
