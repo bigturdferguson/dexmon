@@ -350,3 +350,20 @@ func TestDashboardAPI_Window12h(t *testing.T) {
 		t.Errorf("expected window=12h, got %q", resp.Window)
 	}
 }
+
+func TestDashboardAPI_Window30d(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=30d")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "30d" {
+		t.Errorf("expected window=30d, got %q", resp.Window)
+	}
+}
