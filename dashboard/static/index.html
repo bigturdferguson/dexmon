@@ -379,7 +379,7 @@
         rds.forEach((r, i) => {
           if (!isMinorTick(r.recorded_at, w)) return;
           const x = xScale.getPixelForValue(i);
-          const y = xScale.bottom;
+          const y = xScale.top;
           ctx.beginPath();
           ctx.moveTo(x, y);
           ctx.lineTo(x, y + 4);
@@ -480,9 +480,8 @@
                 color: cssVar('--text-muted'),
                 autoSkip: false,
                 maxRotation: 0,
-                callback: function(val, i) {
-                  const label = chartLabel(this.chart._rulerReadings?.[i]?.recorded_at, this.chart._rulerWindow);
-                  return label || null;
+                callback: function(val) {
+                  return val || null;
                 },
               },
             },
