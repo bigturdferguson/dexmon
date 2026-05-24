@@ -277,3 +277,165 @@ callback_url  = ""
 		t.Fatal("expected error for empty trend list, got nil")
 	}
 }
+
+func TestLoad_TargetRange_Defaults(t *testing.T) {
+	path := writeConfig(t, `
+[server]
+callback_port = 8080
+callback_url  = ""
+
+[health]
+  [health.dexcom_timeout]
+  max_missed_readings = 3
+  priority            = "emergency"
+  recipients          = []
+  [health.watchdog]
+  ping_url = ""
+
+[recipients]
+
+[accounts]
+  [accounts.noah]
+  dexcom_username = "u"
+  dexcom_password = "p"
+  poll_interval   = "5m"
+`)
+	cfg, err := config.Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	acct := cfg.Accounts["noah"]
+	if acct.TargetLow != 70 {
+		t.Errorf("expected TargetLow=70, got %d", acct.TargetLow)
+	}
+	if acct.TargetHigh != 180 {
+		t.Errorf("expected TargetHigh=180, got %d", acct.TargetHigh)
+	}
+}
+
+func TestLoad_TargetRange_ExplicitValues(t *testing.T) {
+	path := writeConfig(t, `
+[server]
+callback_port = 8080
+callback_url  = ""
+
+[health]
+  [health.dexcom_timeout]
+  max_missed_readings = 3
+  priority            = "emergency"
+  recipients          = []
+  [health.watchdog]
+  ping_url = ""
+
+[recipients]
+
+[accounts]
+  [accounts.noah]
+  dexcom_username = "u"
+  dexcom_password = "p"
+  poll_interval   = "5m"
+  target_low      = 80
+  target_high     = 140
+`)
+	cfg, err := config.Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	acct := cfg.Accounts["noah"]
+	if acct.TargetLow != 80 {
+		t.Errorf("expected TargetLow=80, got %d", acct.TargetLow)
+	}
+	if acct.TargetHigh != 140 {
+		t.Errorf("expected TargetHigh=140, got %d", acct.TargetHigh)
+	}
+}
+
+func TestLoad_TargetRange_LowNotLessThanHigh(t *testing.T) {
+	path := writeConfig(t, `
+[server]
+callback_port = 8080
+callback_url  = ""
+
+[health]
+  [health.dexcom_timeout]
+  max_missed_readings = 3
+  priority            = "emergency"
+  recipients          = []
+  [health.watchdog]
+  ping_url = ""
+
+[recipients]
+
+[accounts]
+  [accounts.noah]
+  dexcom_username = "u"
+  dexcom_password = "p"
+  poll_interval   = "5m"
+  target_low      = 180
+  target_high     = 70
+`)
+	_, err := config.Load(path)
+	if err == nil {
+		t.Fatal("expected error for target_low >= target_high, got nil")
+	}
+}
+
+func TestLoad_TargetRange_NegativeLow(t *testing.T) {
+	path := writeConfig(t, `
+[server]
+callback_port = 8080
+callback_url  = ""
+
+[health]
+  [health.dexcom_timeout]
+  max_missed_readings = 3
+  priority            = "emergency"
+  recipients          = []
+  [health.watchdog]
+  ping_url = ""
+
+[recipients]
+
+[accounts]
+  [accounts.noah]
+  dexcom_username = "u"
+  dexcom_password = "p"
+  poll_interval   = "5m"
+  target_low      = -1
+  target_high     = 180
+`)
+	_, err := config.Load(path)
+	if err == nil {
+		t.Fatal("expected error for target_low <= 0, got nil")
+	}
+}
+
+func TestLoad_TargetRange_NegativeHigh(t *testing.T) {
+	path := writeConfig(t, `
+[server]
+callback_port = 8080
+callback_url  = ""
+
+[health]
+  [health.dexcom_timeout]
+  max_missed_readings = 3
+  priority            = "emergency"
+  recipients          = []
+  [health.watchdog]
+  ping_url = ""
+
+[recipients]
+
+[accounts]
+  [accounts.noah]
+  dexcom_username = "u"
+  dexcom_password = "p"
+  poll_interval   = "5m"
+  target_low      = 70
+  target_high     = -1
+`)
+	_, err := config.Load(path)
+	if err == nil {
+		t.Fatal("expected error for target_high <= 0, got nil")
+	}
+}

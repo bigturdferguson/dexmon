@@ -45,6 +45,8 @@ type AccountConfig struct {
 	DexcomUsername string        `toml:"dexcom_username"`
 	DexcomPassword string        `toml:"dexcom_password"`
 	PollInterval   string        `toml:"poll_interval"`
+	TargetLow      int           `toml:"target_low"`
+	TargetHigh     int           `toml:"target_high"`
 	Alarms         []AlarmConfig `toml:"alarms"`
 }
 
@@ -92,6 +94,22 @@ func validate(cfg *Config) error {
 		}
 		if _, err := time.ParseDuration(acct.PollInterval); err != nil {
 			return fmt.Errorf("account %q: invalid poll_interval %q: %w", name, acct.PollInterval, err)
+		}
+		if acct.TargetLow == 0 {
+			acct.TargetLow = 70
+		}
+		if acct.TargetHigh == 0 {
+			acct.TargetHigh = 180
+		}
+		cfg.Accounts[name] = acct
+		if acct.TargetLow <= 0 {
+			return fmt.Errorf("account %q: target_low must be > 0", name)
+		}
+		if acct.TargetHigh <= 0 {
+			return fmt.Errorf("account %q: target_high must be > 0", name)
+		}
+		if acct.TargetLow >= acct.TargetHigh {
+			return fmt.Errorf("account %q: target_low must be less than target_high", name)
 		}
 		for _, alarm := range acct.Alarms {
 			if alarm.Direction != "above" && alarm.Direction != "below" {
