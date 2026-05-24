@@ -116,7 +116,9 @@ func TestDashboardAPI_AlarmStatus_NeverFired(t *testing.T) {
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 
 	if len(resp.Alarms) != 1 {
 		t.Fatalf("expected 1 alarm, got %d", len(resp.Alarms))
@@ -148,7 +150,9 @@ func TestDashboardAPI_AlarmStatus_Active(t *testing.T) {
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 
 	if len(resp.Alarms) != 1 {
 		t.Fatalf("expected 1 alarm, got %d", len(resp.Alarms))
@@ -175,7 +179,9 @@ func TestDashboardAPI_AlarmStatus_SnoozedUntil(t *testing.T) {
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 
 	if resp.Alarms[0].Status != "snoozed_until" {
 		t.Errorf("expected snoozed_until, got %q", resp.Alarms[0].Status)
@@ -200,7 +206,9 @@ func TestDashboardAPI_AlarmStatus_Fired(t *testing.T) {
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 
 	if resp.Alarms[0].Status != "fired" {
 		t.Errorf("expected fired, got %q", resp.Alarms[0].Status)
@@ -232,7 +240,9 @@ func TestDashboardAPI_MultiRecipient_MostConcerningStatusWins(t *testing.T) {
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 
 	if resp.Alarms[0].Status != "active" {
 		t.Errorf("expected active (most concerning), got %q", resp.Alarms[0].Status)

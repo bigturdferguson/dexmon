@@ -57,7 +57,7 @@ type Handler struct {
 	store      *store.Store
 	account    string
 	alarms     []config.AlarmConfig
-	recipients map[string]config.RecipientConfig
+	recipients map[string]config.RecipientConfig // reserved for future recipient-name display
 }
 
 // New constructs a Handler. Pass the single monitored account name and its
@@ -88,6 +88,10 @@ func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request, path, cont
 }
 
 func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	now := time.Now().UTC()
 	since := now.Add(-24 * time.Hour)
 
@@ -162,12 +166,8 @@ func (h *Handler) buildAlarmList(now time.Time) []AlarmJSON {
 	}
 
 	out := make([]AlarmJSON, 0, len(order))
-	seen := map[string]bool{}
 	for _, name := range order {
-		if !seen[name] {
-			out = append(out, best[name].alarm)
-			seen[name] = true
-		}
+		out = append(out, best[name].alarm)
 	}
 	return out
 }
