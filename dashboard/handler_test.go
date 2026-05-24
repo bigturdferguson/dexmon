@@ -267,6 +267,10 @@ func TestDashboardAPI_TargetRange(t *testing.T) {
 	h := dashboard.New(s, "noah", nil, nil, 80, 140)
 	w := get(t, h, "/api/dashboard")
 
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
 	var resp dashboard.DashboardResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)

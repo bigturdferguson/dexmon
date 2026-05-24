@@ -14,7 +14,6 @@ import (
 //go:embed static
 var staticFS embed.FS
 
-// TargetJSON holds the target glucose range.
 type TargetJSON struct {
 	Low  int `json:"low"`
 	High int `json:"high"`
