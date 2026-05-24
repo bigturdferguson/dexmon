@@ -97,34 +97,90 @@ Current BG and Previous BG are unaffected — they always show the most recent r
 | 7d  | BG — Last 7 Days |
 | 30d | BG — Last 30 Days |
 
-### Adaptive chart labels
+### Adaptive chart labels — ruler-style ticks
 
-Label format and tick limit adapt to the window:
+Labels only appear at clean time boundaries. Sub-boundary positions show a short tick mark with no label (ruler effect). `maxTicksLimit` is removed; `autoSkip: false` is used instead so label generation is fully explicit.
 
-| Window | Label format | `maxTicksLimit` | Approximate spacing |
-|--------|-------------|-----------------|---------------------|
-| 12h | `14:00` | 6 | ~every 2h |
-| 24h | `14:00` | 8 | ~every 3h (current) |
-| 7d  | `Mon` / `Tue` etc. | 7 | ~one per day |
-| 30d | `May 24` | 8 | ~every 4 days |
+**Major ticks (labeled):** only at clean boundaries per window:
 
-Label generation:
+| Window | Major tick condition | Label format |
+|--------|---------------------|--------------|
+| 12h / 24h | `minutes === 0` (exact hour) | `14:00` |
+| 7d | `hours === 0 && minutes === 0` (midnight) | `Mon`, `Tue` etc. |
+| 30d | `hours === 0 && minutes === 0` (midnight) | `May 24` |
+
+**Minor ticks (short mark, no label):** drawn by a custom `rulerPlugin` after Chart.js renders:
+
+| Window | Minor tick condition |
+|--------|---------------------|
+| 12h / 24h | `minutes === 30` |
+| 7d | `hours === 12 && minutes === 0` |
+| 30d | every other midnight (every 48h) |
+
+All other readings: no tick mark, no label.
+
+**Label generation** (passed to Chart.js as the `labels` array):
 
 ```js
 function chartLabel(isoStr, window) {
     const dt = new Date(isoStr);
+    if (window === '12h' || window === '24h') {
+        return dt.getMinutes() === 0
+            ? dt.getHours().toString().padStart(2, '0') + ':00'
+            : '';
+    }
     if (window === '7d') {
-        return dt.toLocaleDateString([], { weekday: 'short' });
+        return (dt.getHours() === 0 && dt.getMinutes() === 0)
+            ? dt.toLocaleDateString([], { weekday: 'short' })
+            : '';
     }
-    if (window === '30d') {
-        return dt.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-    return dt.getHours().toString().padStart(2, '0') + ':' +
-           dt.getMinutes().toString().padStart(2, '0');
+    // 30d
+    return (dt.getHours() === 0 && dt.getMinutes() === 0)
+        ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
+        : '';
 }
 ```
 
-`maxRotation` remains `0` for 12h/24h. For 7d/30d, short day/date labels don't need rotation — `maxRotation: 0` stays for all windows.
+**`rulerPlugin`** — a Chart.js plugin registered inline. After each draw, it iterates the readings array and draws a short vertical line (4px) on the x-axis at minor tick positions:
+
+```js
+const rulerPlugin = {
+    id: 'ruler',
+    afterDraw(chart) {
+        const xScale = chart.scales.x;
+        const ctx = chart.ctx;
+        const window = chart._rulerWindow; // set before chart creation
+        const readings = chart._rulerReadings;
+        ctx.save();
+        ctx.strokeStyle = getComputedStyle(document.documentElement)
+            .getPropertyValue('--text-muted').trim();
+        ctx.lineWidth = 1;
+        readings.forEach((r, i) => {
+            if (!isMinorTick(r.recorded_at, window)) return;
+            const x = xScale.getPixelForValue(i);
+            const y = xScale.bottom;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y + 4);
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
+};
+```
+
+`isMinorTick(isoStr, window)` returns `true` for the minor-tick conditions in the table above.
+
+`maxRotation: 0` remains for all windows — clean boundary labels are short and never need rotation.
+
+Chart.js x-axis options change from:
+```js
+ticks: { color: cssVar('--text-muted'), maxTicksLimit: 8, maxRotation: 0 }
+```
+to:
+```js
+ticks: { color: cssVar('--text-muted'), autoSkip: false, maxRotation: 0 }
+```
 
 ### Point radius
 
