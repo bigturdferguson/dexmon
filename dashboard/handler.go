@@ -23,6 +23,7 @@ type TargetJSON struct {
 type DashboardResponse struct {
 	Account  string        `json:"account"`
 	AsOf     time.Time     `json:"as_of"`
+	Window   string        `json:"window"`
 	Target   TargetJSON    `json:"target"`
 	Current  *ReadingJSON  `json:"current"`
 	Previous *ReadingJSON  `json:"previous"`
@@ -95,13 +96,27 @@ func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request, path, cont
 	w.Write(data)
 }
 
+func windowDuration(s string) (string, time.Duration) {
+	switch s {
+	case "12h":
+		return "12h", 12 * time.Hour
+	case "7d":
+		return "7d", 7 * 24 * time.Hour
+	case "30d":
+		return "30d", 30 * 24 * time.Hour
+	default:
+		return "24h", 24 * time.Hour
+	}
+}
+
 func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	now := time.Now().UTC()
-	since := now.Add(-24 * time.Hour)
+	window, dur := windowDuration(r.URL.Query().Get("window"))
+	since := now.Add(-dur)
 
 	readings, err := h.store.GetReadings(h.account, since)
 	if err != nil {
@@ -117,6 +132,7 @@ func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request) {
 	resp := DashboardResponse{
 		Account:  h.account,
 		AsOf:     now,
+		Window:   window,
 		Target:   TargetJSON{Low: h.targetLow, High: h.targetHigh},
 		Stats:    StatsJSON{High: maxVal, Low: minVal, Avg: avgVal},
 		Readings: toReadingJSON(readings),

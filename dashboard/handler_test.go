@@ -282,3 +282,71 @@ func TestDashboardAPI_TargetRange(t *testing.T) {
 		t.Errorf("expected Target.High=140, got %d", resp.Target.High)
 	}
 }
+
+func TestDashboardAPI_WindowDefault(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "24h" {
+		t.Errorf("expected window=24h, got %q", resp.Window)
+	}
+}
+
+func TestDashboardAPI_Window7d(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=7d")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "7d" {
+		t.Errorf("expected window=7d, got %q", resp.Window)
+	}
+}
+
+func TestDashboardAPI_WindowInvalidFallsBack(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=bogus")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "24h" {
+		t.Errorf("expected window=24h for invalid input, got %q", resp.Window)
+	}
+}
+
+func TestDashboardAPI_Window12h(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=12h")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "12h" {
+		t.Errorf("expected window=12h, got %q", resp.Window)
+	}
+}
