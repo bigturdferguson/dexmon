@@ -12,7 +12,8 @@ dexmon runs a polling loop for each configured Dexcom account. Every `poll_inter
 
 ## Features
 
-- Multiple Dexcom Share accounts, each with independent alarm rules
+- Real-time web dashboard at `/` — current BG, stats, 24-hour graph, alarm summary; auto-refreshes every 5 minutes; light/dark theme
+- Multiple Dexcom Share accounts, each with independent alarm rules (dashboard displays one account)
 - Per-alarm threshold, trend direction filter, and priority (normal / high / emergency)
 - Emergency alarms retry until acknowledged via Pushover; acknowledgments are received by webhook
 - Per-recipient snooze: one person snoozing does not silence others
@@ -78,7 +79,7 @@ callback_url  = "https://your-domain.com/pushover/callback"
 
 | Key | Description |
 |---|---|
-| `callback_port` | Local port the webhook server listens on |
+| `callback_port` | Local port the server listens on. Serves the web dashboard at `/` and the Pushover webhook at `/pushover/callback`. |
 | `callback_url` | Public URL Pushover uses to deliver acknowledgments. Must be reachable from the internet for emergency alarms to support acknowledgment/snooze. |
 
 ### `[health]`
