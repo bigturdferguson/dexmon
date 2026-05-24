@@ -1,65 +1,153 @@
 # dexmon
 
-A long-running Go daemon that polls one or more Dexcom Share CGM accounts, evaluates configurable alarm rules, and delivers per-recipient Pushover notifications. Runs on a Raspberry Pi, any ARM host, or a free-tier cloud instance.
+A long-running Go daemon that monitors a Dexcom Share CGM account, evaluates configurable alarm rules, and sends Pushover notifications. Every poll interval it fetches the latest reading; when blood glucose crosses a threshold and the current trend matches the configured filter, a notification is dispatched. Emergency alarms retry until acknowledged — when a recipient acknowledges from the Pushover app, dexmon's webhook stops retrying and can optionally snooze further alerts for that recipient.
 
 ---
 
-## How It Works
+## Dashboard
 
-dexmon runs a polling loop for each configured Dexcom account. Every `poll_interval`, it fetches the latest CGM reading from the Dexcom Share API. Each reading is evaluated against the account's alarm rules — an alarm fires when the blood glucose value crosses a threshold **and** the current trend matches the configured filter. Fired alarms are dispatched as Pushover notifications at the configured priority. Emergency-priority alarms retry until acknowledged; when a recipient acknowledges from the Pushover app, Pushover POSTs to dexmon's callback URL, which stops retrying and optionally snoozes for that recipient.
+The dashboard is available at `https://<appname>.fly.dev/` and auto-refreshes every 5 minutes.
 
----
+| Widget | Shows |
+|--------|-------|
+| Current BG | Value, trend arrow (↑↑ ↑ ↗ → ↘ ↓ ↓↓), and time since reading |
+| Previous | Prior reading value and age |
+| High | Maximum BG over the last 24 hours |
+| Low | Minimum BG over the last 24 hours |
+| Avg | Integer average BG over the last 24 hours |
+| BG Graph | 24-hour line chart with a shaded 70–180 target range |
+| Alarms | Per-alarm name, priority, last fired time, and current status |
 
-## Features
-
-- Real-time web dashboard at `/` — current BG, stats, 24-hour graph, alarm summary; auto-refreshes every 5 minutes; light/dark theme
-- Multiple Dexcom Share accounts, each with independent alarm rules (dashboard displays one account)
-- Per-alarm threshold, trend direction filter, and priority (normal / high / emergency)
-- Emergency alarms retry until acknowledged via Pushover; acknowledgments are received by webhook
-- Per-recipient snooze: one person snoozing does not silence others
-- Backoff and rearm-on-recovery controls to avoid alert fatigue
-- Dead man's switch via healthchecks.io (or any ping URL)
-- Built-in missed-readings health alarm
-- Pure-Go SQLite (no CGO) — cross-compiles to ARM without a toolchain
+Supports light and dark themes — toggle with the button in the header. Preference is saved across page loads.
 
 ---
 
-## Quick Start
+## Deploy to Fly.io
 
-### 1. Build
+Fly.io is the recommended way to run dexmon. You get a persistent database volume, automatic HTTPS (required for emergency alarm callbacks), and a machine that runs 24/7. The free tier is sufficient.
 
-```bash
-go build -o dexmon .
-```
+### Prerequisites
 
-The binary has no runtime dependencies.
+- **flyctl** installed:
+  ```bash
+  curl -L https://fly.io/install.sh | sh
+  ```
+- A **Fly.io account** at [fly.io](https://fly.io) — free, no credit card required
+- A **Pushover** account at [pushover.net](https://pushover.net) with an application created
+- **Dexcom Share** enabled on the patient's Dexcom G-series app (Settings → Share → Invite Followers)
 
-### 2. Configure
+### 1. Gather your credentials
 
-Copy the example config and edit it:
+You need three things before running the deploy script.
+
+**Pushover app token**
+
+Go to [pushover.net](https://pushover.net) → scroll to **Your Applications** → click your app → copy the **API Token/Key**. This is your `PUSHOVER_APP_TOKEN`.
+
+**Pushover user key**
+
+On [pushover.net](https://pushover.net), your **User Key** is shown at the top of the page after logging in. Each person who receives notifications needs their own user key — this is `PUSHOVER_USER_KEY_<NAME>`.
+
+**Dexcom credentials**
+
+The email address and password used to log in to the Dexcom mobile app. These are `DEXCOM_USER_<NAME>` and `DEXCOM_PASS_<NAME>`.
+
+### 2. Prepare config.toml
 
 ```bash
 cp config.toml.example config.toml
 ```
 
-Edit `config.toml` to match your setup (see [Configuration](#configuration) below). Secrets are never stored in the config file — they are injected via environment variables.
+Open `config.toml` and fill in your alarm rules, thresholds, and recipient names. Leave all `${VARIABLE_NAME}` placeholders exactly as they are — **do not replace them with real credentials**.
 
-### 3. Set environment variables
+> **How `${VAR}` placeholders work:** Every credential in `config.toml` is written as `${VARIABLE_NAME}` — a placeholder, never the real value. The deploy script scans the file, finds each placeholder, and prompts you for the actual value. Your credentials go directly into Fly's encrypted secret store and never touch your disk. You type each value once at the prompt; that's it.
 
-```bash
-export PUSHOVER_APP_TOKEN=...
-export PUSHOVER_USER_KEY_BRANDON=...
-export PUSHOVER_USER_KEY_SARAH=...
-export DEXCOM_USER_JESSICA=...
-export DEXCOM_PASS_JESSICA=...
-export HEALTHCHECKS_PING_URL=...   # optional
-```
+Leave `callback_url = ""` for now — you will fill this in after the first deploy.
 
-### 4. Run
+### 3. Run `./fly/deploy.sh`
 
 ```bash
-./dexmon -config config.toml -db dexmon.db
+./fly/deploy.sh
 ```
+
+The script walks you through three prompts before deploying.
+
+**App name**
+
+Choose a name that is unique across all Fly.io users — `dexmon` is already taken. Use something like `dexmon-noah` or `dexmon-yourname`. This becomes your URL: `https://<appname>.fly.dev`.
+
+**Region**
+
+The Fly.io data center closest to you:
+
+| Code | Location |
+|------|----------|
+| `iad` | Northern Virginia (US East) |
+| `ord` | Chicago (US Central) |
+| `lax` | Los Angeles (US West) |
+| `lhr` | London (Europe) |
+| `syd` | Sydney (Australia) |
+
+Full list: [fly.io/docs/reference/regions](https://fly.io/docs/reference/regions/)
+
+**Secret prompts**
+
+The script finds every `${VAR}` placeholder in your `config.toml` and asks for its value one at a time:
+
+```
+Value for PUSHOVER_APP_TOKEN (NEW — required):
+```
+
+A few things to know:
+- **Nothing appears as you type — this is normal.** Input is hidden to protect your credentials.
+- Paste or type the value and press Enter.
+- Each prompt name tells you exactly which credential is needed:
+
+| Prompt | What to enter |
+|--------|--------------|
+| `PUSHOVER_APP_TOKEN` | API Token/Key — pushover.net → Your Applications → click your app |
+| `PUSHOVER_USER_KEY_<NAME>` | User Key — pushover.net, shown at top of page after login |
+| `DEXCOM_USER_<NAME>` | Dexcom login email |
+| `DEXCOM_PASS_<NAME>` | Dexcom login password |
+| `HEALTHCHECKS_PING_URL` | Ping URL from healthchecks.io — leave blank if not using |
+
+After all prompts, the script creates the Fly app, provisions a 1 GB persistent volume for the database, uploads your secrets, and builds and deploys the container remotely.
+
+### 4. Set the callback URL
+
+After the first deploy your app is live at `https://<appname>.fly.dev`. Open `config.toml` and update:
+
+```toml
+[server]
+callback_url = "https://<appname>.fly.dev/pushover/callback"
+```
+
+Then push the updated config:
+
+```bash
+./fly/update.sh
+```
+
+Choose **option 1** (Config file). The script re-encodes `config.toml` and redeploys.
+
+### 5. Verify
+
+```bash
+fly logs --app <appname>
+```
+
+Healthy output looks like:
+
+```
+[noah] reading: 142 → (no alarm)
+[noah] reading: 138 → (no alarm)
+```
+
+A new line appears every poll interval. The dashboard is live at `https://<appname>.fly.dev/`.
+
+### Automate deploys with CI/CD
+
+To automatically redeploy on every push to `main`, see [guides/github-actions.md](guides/github-actions.md).
 
 ---
 
@@ -205,49 +293,22 @@ recipients        = ["brandon", "sarah", "jessica"]
 
 ---
 
-## Environment Variables
+## Updating
 
-| Variable | Required | Description |
-|---|---|---|
-| `PUSHOVER_APP_TOKEN` | Yes | Pushover application token (from pushover.net → Your Apps) |
-| `PUSHOVER_USER_KEY_<NAME>` | Per recipient | Pushover user key for each recipient defined in config |
-| `DEXCOM_USER_<NAME>` | Per account | Dexcom Share username for each account |
-| `DEXCOM_PASS_<NAME>` | Per account | Dexcom Share password for each account |
-| `HEALTHCHECKS_PING_URL` | No | Watchdog ping URL (referenced via `${...}` in config) |
+Run `./fly/update.sh` whenever you need to make changes:
 
-The `<NAME>` suffix in variable names is the token referenced in `config.toml`. The names are arbitrary — they just need to match between the config file and the environment.
+| Option | When to use |
+|--------|-------------|
+| **1. Config file** | Changed alarm rules, thresholds, or `callback_url` |
+| **2. Secrets** | Rotated a Dexcom or Pushover credential |
+| **3. Code only** | Pulled new code from git, no config or secret changes |
+| **4. Everything** | Changed config and rotated secrets at the same time |
 
----
-
-## Deployment
-
-| Platform | Guide |
-|---|---|
-| Raspberry Pi (home, always-on) | [guides/raspberry-pi.md](guides/raspberry-pi.md) |
-| Fly.io (cloud, no hardware needed) | [guides/fly-io.md](guides/fly-io.md) |
-| GitHub Actions CI/CD (auto-deploy on push) | [guides/github-actions.md](guides/github-actions.md) |
+Options 1, 2, and 4 automatically redeploy so changes take effect immediately.
 
 ---
 
-## Flags
+## Other Deployment Methods
 
-```
-./dexmon -config config.toml -db dexmon.db
-```
-
-| Flag | Default | Description |
-|---|---|---|
-| `-config` | `config.toml` | Path to the TOML config file |
-| `-db` | `dexmon.db` | Path to the SQLite database file |
-
----
-
-## Error Handling
-
-| Failure | Behavior |
-|---|---|
-| Dexcom API unreachable | Log, increment miss counter, skip tick — never crashes |
-| Dexcom session expired | Re-authenticates transparently |
-| Pushover API failure | Log, leave alarm state untouched, retry next evaluation |
-| SQLite write failure | Fatal — systemd restarts the service |
-| Invalid config on startup | Fatal with descriptive error before any network calls |
+- **Local test run** — [guides/local-run.md](guides/local-run.md). Runs on your machine with no persistent storage and no public callback URL. Suitable for verifying configuration; not for production.
+- **Raspberry Pi** — [guides/raspberry-pi.md](guides/raspberry-pi.md). Always-on self-hosted option using systemd and Cloudflare Tunnel for callbacks.
