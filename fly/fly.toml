@@ -1,5 +1,5 @@
-app = 'DEXMON_APP_NAME'
-primary_region = 'DEXMON_REGION'
+app = 'dexmon'
+primary_region = 'dfw'
 
 [build]
 
