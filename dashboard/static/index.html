@@ -561,8 +561,7 @@
       }
       if (inBand) {
         const x1 = xScale.getPixelForValue(bandStart);
-        const x2 = xScale.getPixelForValue(readings.length - 1);
-        ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
+        ctx.fillRect(x1, chartArea.top, chartArea.right - x1, chartArea.bottom - chartArea.top);
       }
 
       ctx.restore();
@@ -581,7 +580,7 @@
         const dt = new Date(r.recorded_at);
         let isBoundary = false;
         if (w === '30d') {
-          isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 7 === 0;
+          isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 7 === 1;
         } else {
           isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1;
         }
