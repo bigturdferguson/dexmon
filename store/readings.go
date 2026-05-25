@@ -63,12 +63,3 @@ func (s *Store) GetReadings(account string, since time.Time) ([]types.Reading, e
 	}
 	return readings, rows.Err()
 }
-
-func (s *Store) GetReadingStats(account string, since time.Time) (min, max, avg int, err error) {
-	err = s.db.QueryRow(
-		`SELECT COALESCE(MIN(value), 0), COALESCE(MAX(value), 0), COALESCE(CAST(AVG(value) AS INTEGER), 0)
-		 FROM readings WHERE account = ? AND recorded_at >= ?`,
-		account, since.UTC(),
-	).Scan(&min, &max, &avg)
-	return
-}

@@ -47,7 +47,7 @@ func (p *Poller) Run() {
 	if err := p.fetcher.Login(); err != nil {
 		log.Printf("[%s] initial login failed: %v", p.accountName, err)
 	}
-	cutoff := time.Now().UTC().AddDate(0, 0, -30)
+	cutoff := time.Now().UTC().AddDate(0, 0, -90)
 	if err := p.store.PruneReadings(p.accountName, cutoff); err != nil {
 		log.Printf("[%s] prune readings: %v", p.accountName, err)
 	}

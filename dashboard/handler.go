@@ -3,7 +3,9 @@ package dashboard
 import (
 	"embed"
 	"encoding/json"
+	"math"
 	"net/http"
+	"sort"
 	"time"
 
 	"dexmon/config"
@@ -40,9 +42,75 @@ type ReadingJSON struct {
 }
 
 type StatsJSON struct {
-	High int `json:"high"`
-	Low  int `json:"low"`
-	Avg  int `json:"avg"`
+	High        int     `json:"high"`
+	Low         int     `json:"low"`
+	Avg         int     `json:"avg"`
+	StdDev      int     `json:"std_dev"`
+	CV          float64 `json:"cv"`
+	TimeInRange float64 `json:"time_in_range"`
+	Q1          int     `json:"q1"`
+	Median      int     `json:"median"`
+	Q3          int     `json:"q3"`
+}
+
+func computeStats(readings []types.Reading, targetLow, targetHigh int) StatsJSON {
+	n := len(readings)
+	if n == 0 {
+		return StatsJSON{}
+	}
+
+	var sum, sumSq float64
+	minVal, maxVal := readings[0].Value, readings[0].Value
+	inRange := 0
+	vals := make([]int, n)
+
+	for i, r := range readings {
+		v := r.Value
+		vals[i] = v
+		fv := float64(v)
+		sum += fv
+		sumSq += fv * fv
+		if v < minVal {
+			minVal = v
+		}
+		if v > maxVal {
+			maxVal = v
+		}
+		if v >= targetLow && v <= targetHigh {
+			inRange++
+		}
+	}
+
+	fn := float64(n)
+	mean := sum / fn
+	variance := sumSq/fn - mean*mean
+	if variance < 0 {
+		variance = 0
+	}
+	stddev := math.Sqrt(variance)
+
+	var cv float64
+	if mean > 0 {
+		cv = math.Round(stddev/mean*100*10) / 10
+	}
+	tir := math.Round(float64(inRange)/fn*100*10) / 10
+
+	sort.Ints(vals)
+	q1 := vals[int(float64(n-1)*0.25)]
+	median := vals[int(float64(n-1)*0.50)]
+	q3 := vals[int(float64(n-1)*0.75)]
+
+	return StatsJSON{
+		High:        maxVal,
+		Low:         minVal,
+		Avg:         int(math.Round(mean)),
+		StdDev:      int(math.Round(stddev)),
+		CV:          cv,
+		TimeInRange: tir,
+		Q1:          q1,
+		Median:      median,
+		Q3:          q3,
+	}
 }
 
 type AlarmJSON struct {
@@ -111,6 +179,8 @@ func windowDuration(s string) (string, time.Duration) {
 		return "7d", 7 * 24 * time.Hour
 	case "30d":
 		return "30d", 30 * 24 * time.Hour
+	case "90d":
+		return "90d", 90 * 24 * time.Hour
 	default:
 		return "24h", 24 * time.Hour
 	}
@@ -130,11 +200,6 @@ func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	minVal, maxVal, avgVal, err := h.store.GetReadingStats(h.account, since)
-	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
 	history, err := h.store.GetAlarmHistory(h.account, since)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -146,7 +211,7 @@ func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request) {
 		AsOf:         now,
 		Window:       window,
 		Target:       TargetJSON{Low: h.targetLow, High: h.targetHigh},
-		Stats:        StatsJSON{High: maxVal, Low: minVal, Avg: avgVal},
+		Stats:        computeStats(readings, h.targetLow, h.targetHigh),
 		Readings:     toReadingJSON(readings),
 		Alarms:       h.buildAlarmList(now),
 		AlarmHistory: toAlarmHistoryJSON(history),

@@ -197,6 +197,42 @@
     .status-active { color: var(--low); font-weight: 600; }
     .text-muted { color: var(--text-muted); }
     .update-error { color: var(--high); }
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.625rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .tab-btn.tab-btn-active {
+      color: var(--text);
+      border-bottom-color: var(--text);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.tab-active { display: block; }
+    /* ── New stat widgets ── */
+    .stat-full { grid-column: 1 / -1; }
+    .tir-bar-wrap { flex: 1; background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
+    .tir-bar { height: 100%; border-radius: 99px; background: var(--normal); width: 0%; transition: width 0.3s; }
+    .quartile-row { display: flex; justify-content: space-around; margin-top: 0.4rem; align-items: center; }
+    .quartile-cell { text-align: center; }
+    .quartile-cell .stat-value { font-size: 1.375rem; }
+    .quartile-divider { color: var(--border); font-size: 1.5rem; line-height: 1; }
   </style>
 </head>
 <body>
@@ -208,37 +244,6 @@
     </div>
   </header>
   <main>
-    <div class="stats-grid">
-      <div class="stat-card stat-current">
-        <div class="stat-label">Current BG</div>
-        <div class="stat-value" id="val-current">—</div>
-        <div class="stat-sub">
-          <span class="trend" id="val-trend"></span>
-          <span id="val-current-age"></span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Previous</div>
-        <div class="stat-value" id="val-prev">—</div>
-        <div class="stat-sub" id="val-prev-age"></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">High</div>
-        <div class="stat-value" id="val-high">—</div>
-        <div class="stat-sub" id="sub-high">24h</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Low</div>
-        <div class="stat-value" id="val-low">—</div>
-        <div class="stat-sub" id="sub-low">24h</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Avg</div>
-        <div class="stat-value" id="val-avg">—</div>
-        <div class="stat-sub" id="sub-avg">24h</div>
-      </div>
-    </div>
-
     <div class="card">
       <div class="card-header">
         <div class="card-title" id="chart-title">BG — Last 24 Hours</div>
@@ -248,6 +253,7 @@
             <button class="pill" data-window="24h" onclick="setWindow('24h')">24h</button>
             <button class="pill" data-window="7d"  onclick="setWindow('7d')">7d</button>
             <button class="pill" data-window="30d" onclick="setWindow('30d')">30d</button>
+            <button class="pill" data-window="90d" onclick="setWindow('90d')">90d</button>
           </div>
           <button id="fullscreen-btn" onclick="toggleFullscreen()" style="background:none;border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;cursor:pointer;font-size:0.9rem;color:var(--text);line-height:1.4;" title="Toggle fullscreen">⤢</button>
         </div>
@@ -255,28 +261,105 @@
       <div class="chart-wrap"><canvas id="bg-chart"></canvas></div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Alarms</div>
-      <table>
-        <thead>
-          <tr><th>Alarm</th><th>Priority</th><th>Last Fired</th><th>Status</th></tr>
-        </thead>
-        <tbody id="alarm-rows">
-          <tr><td colspan="4" class="text-muted">Loading…</td></tr>
-        </tbody>
-      </table>
+    <div class="tab-bar">
+      <button class="tab-btn" data-tab="stats" onclick="setTab('stats')">Stats</button>
+      <button class="tab-btn" data-tab="alarms" onclick="setTab('alarms')">Alarms</button>
     </div>
 
-    <div class="card">
-      <div class="card-title">Alarm History</div>
-      <table>
-        <thead>
-          <tr><th>Alarm</th><th>BG</th><th>Time</th></tr>
-        </thead>
-        <tbody id="alarm-history-rows">
-          <tr><td colspan="3" class="text-muted">Loading…</td></tr>
-        </tbody>
-      </table>
+    <div id="tab-stats" class="tab-panel">
+      <div class="stats-grid">
+        <div class="stat-card stat-current">
+          <div class="stat-label">Current BG</div>
+          <div class="stat-value" id="val-current">—</div>
+          <div class="stat-sub">
+            <span class="trend" id="val-trend"></span>
+            <span id="val-current-age"></span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Previous</div>
+          <div class="stat-value" id="val-prev">—</div>
+          <div class="stat-sub" id="val-prev-age"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">High</div>
+          <div class="stat-value" id="val-high">—</div>
+          <div class="stat-sub" id="sub-high">24h</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Low</div>
+          <div class="stat-value" id="val-low">—</div>
+          <div class="stat-sub" id="sub-low">24h</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg</div>
+          <div class="stat-value" id="val-avg">—</div>
+          <div class="stat-sub" id="sub-avg">24h</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Std Dev</div>
+          <div class="stat-value" id="val-stddev">—</div>
+          <div class="stat-sub" id="sub-stddev">24h</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">CV</div>
+          <div class="stat-value" id="val-cv">—</div>
+          <div class="stat-sub" id="sub-cv">24h</div>
+        </div>
+        <div class="stat-card stat-full">
+          <div class="stat-label">In Range</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div class="stat-value" id="val-tir">—</div>
+            <div class="tir-bar-wrap"><div class="tir-bar" id="tir-bar"></div></div>
+          </div>
+          <div class="stat-sub" id="sub-tir">24h</div>
+        </div>
+        <div class="stat-card stat-full">
+          <div class="stat-label">Quartiles <span id="sub-quartiles" style="font-weight:400;">24h</span></div>
+          <div class="quartile-row">
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-q1">—</div>
+              <div class="stat-sub">Q1</div>
+            </div>
+            <div class="quartile-divider">|</div>
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-median">—</div>
+              <div class="stat-sub">Median</div>
+            </div>
+            <div class="quartile-divider">|</div>
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-q3">—</div>
+              <div class="stat-sub">Q3</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-alarms" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Alarms</div>
+        <table>
+          <thead>
+            <tr><th>Alarm</th><th>Priority</th><th>Last Fired</th><th>Status</th></tr>
+          </thead>
+          <tbody id="alarm-rows">
+            <tr><td colspan="4" class="text-muted">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Alarm History</div>
+        <table>
+          <thead>
+            <tr><th>Alarm</th><th>BG</th><th>Time</th></tr>
+          </thead>
+          <tbody id="alarm-history-rows">
+            <tr><td colspan="3" class="text-muted">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 
@@ -345,13 +428,15 @@
         '24h': 'BG — Last 24 Hours',
         '7d':  'BG — Last 7 Days',
         '30d': 'BG — Last 30 Days',
+        '90d': 'BG — Last 90 Days',
       };
       return map[w] || 'BG — Last 24 Hours';
     }
 
     function updateWindowLabels(w) {
-      ['high', 'low', 'avg'].forEach(id => {
-        document.getElementById('sub-' + id).textContent = w;
+      ['high', 'low', 'avg', 'stddev', 'cv', 'tir', 'quartiles'].forEach(id => {
+        const el = document.getElementById('sub-' + id);
+        if (el) el.textContent = w;
       });
       document.getElementById('chart-title').textContent = chartTitle(w);
       document.querySelectorAll('.pill').forEach(b => {
@@ -397,16 +482,24 @@
           ? dt.toLocaleDateString([], { weekday: 'short' })
           : '';
       }
-      // 30d: label ~every 5 days at midnight to avoid mobile density overflow
-      return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 5 === 1)
-        ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
-        : '';
+      if (w === '30d') {
+        return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 5 === 1)
+          ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
+          : '';
+      }
+      if (w === '90d') {
+        return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1)
+          ? dt.toLocaleDateString([], { month: 'short' })
+          : '';
+      }
+      return '';
     }
 
     function isMinorTick(isoStr, w) {
       const dt = new Date(isoStr);
       if (w === '12h' || w === '24h') return dt.getMinutes() === 30;
-      // 7d and 30d: noon mark (halfway through each day)
+      if (w === '90d') return dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 15;
+      // 7d and 30d: noon mark
       return dt.getHours() === 12 && dt.getMinutes() === 0;
     }
 
@@ -434,6 +527,88 @@
       }
     };
 
+    // ── night bands plugin ─────────────────────────────────────────────────
+    function isNightHour(isoStr) {
+      const h = new Date(isoStr).getHours();
+      return h >= 22 || h < 6;
+    }
+
+    function drawNightBands(chart) {
+      const { ctx, chartArea, scales } = chart;
+      const readings = chart._rulerReadings;
+      const xScale = scales.x;
+      const color = document.documentElement.classList.contains('dark')
+        ? 'rgba(255,255,255,0.04)'
+        : 'rgba(15,23,42,0.06)';
+
+      ctx.save();
+      ctx.fillStyle = color;
+
+      let inBand = false;
+      let bandStart = 0;
+
+      for (let i = 0; i < readings.length; i++) {
+        const night = isNightHour(readings[i].recorded_at);
+        if (night && !inBand) {
+          inBand = true;
+          bandStart = i;
+        } else if (!night && inBand) {
+          inBand = false;
+          const x1 = xScale.getPixelForValue(bandStart);
+          const x2 = xScale.getPixelForValue(i);
+          ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
+        }
+      }
+      if (inBand) {
+        const x1 = xScale.getPixelForValue(bandStart);
+        ctx.fillRect(x1, chartArea.top, chartArea.right - x1, chartArea.bottom - chartArea.top);
+      }
+
+      ctx.restore();
+    }
+
+    function drawBoundaryLines(chart, w) {
+      const { ctx, chartArea, scales } = chart;
+      const readings = chart._rulerReadings;
+      const xScale = scales.x;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(100,116,139,0.25)';
+      ctx.lineWidth = 1;
+
+      readings.forEach((r, i) => {
+        const dt = new Date(r.recorded_at);
+        let isBoundary = false;
+        if (w === '30d') {
+          isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 7 === 1;
+        } else {
+          isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1;
+        }
+        if (!isBoundary) return;
+        const x = xScale.getPixelForValue(i);
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    }
+
+    const nightBandsPlugin = {
+      id: 'nightBands',
+      beforeDraw(chart) {
+        const w = chart._rulerWindow;
+        const readings = chart._rulerReadings;
+        if (!w || !readings?.length) return;
+        if (w === '30d' || w === '90d') {
+          drawBoundaryLines(chart, w);
+        } else {
+          drawNightBands(chart);
+        }
+      }
+    };
+
     // ── render ─────────────────────────────────────────────────────────────
     function renderWidgets(d) {
       const cur = d.current, prev = d.previous;
@@ -451,6 +626,39 @@
       document.getElementById('val-high').textContent = d.stats?.high || '—';
       document.getElementById('val-low').textContent  = d.stats?.low  || '—';
       document.getElementById('val-avg').textContent  = d.stats?.avg  || '—';
+
+      // Std Dev
+      document.getElementById('val-stddev').textContent = d.stats?.std_dev ? '±' + d.stats.std_dev : '—';
+
+      // CV
+      const cvEl = document.getElementById('val-cv');
+      const cvVal = d.stats?.cv;
+      if (cvVal != null) {
+        cvEl.textContent = cvVal + '%';
+        cvEl.className = 'stat-value ' + (cvVal < 36 ? 'bg-normal' : 'bg-high');
+      } else {
+        cvEl.textContent = '—';
+        cvEl.className = 'stat-value';
+      }
+
+      // Time in Range
+      const tirEl = document.getElementById('val-tir');
+      const tirVal = d.stats?.time_in_range;
+      if (tirVal != null) {
+        tirEl.textContent = tirVal + '%';
+        tirEl.className = 'stat-value ' + (tirVal >= 70 ? 'bg-normal' : tirVal >= 54 ? 'bg-high' : 'bg-low');
+        const bar = document.getElementById('tir-bar');
+        bar.style.width = tirVal + '%';
+        bar.style.background = tirVal >= 70 ? cssVar('--normal') : tirVal >= 54 ? cssVar('--high') : cssVar('--low');
+      } else {
+        tirEl.textContent = '—';
+        tirEl.className = 'stat-value';
+      }
+
+      // Quartiles
+      document.getElementById('val-q1').textContent     = d.stats?.q1     || '—';
+      document.getElementById('val-median').textContent = d.stats?.median  || '—';
+      document.getElementById('val-q3').textContent     = d.stats?.q3      || '—';
     }
 
     function renderChart(readings) {
@@ -476,7 +684,7 @@
       const ctx = document.getElementById('bg-chart').getContext('2d');
       chart = new Chart(ctx, {
         type: 'line',
-        plugins: [rulerPlugin],
+        plugins: [rulerPlugin, nightBandsPlugin],
         data: {
           labels,
           datasets: [
@@ -605,6 +813,15 @@
       document.getElementById('last-updated').textContent = 'Last updated: ' + timeAgo(lastAsOf);
     }
 
+    // ── tabs ───────────────────────────────────────────────────────────────
+    function setTab(name) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('tab-active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-btn-active'));
+      document.getElementById('tab-' + name).classList.add('tab-active');
+      document.querySelector('[data-tab="' + name + '"]').classList.add('tab-btn-active');
+      localStorage.setItem('dexmon-tab', name);
+    }
+
     // ── fetch / refresh ────────────────────────────────────────────────────
     async function fetchAndRender() {
       try {
@@ -629,6 +846,7 @@
     }
 
     updateWindowLabels(currentWindow);
+    setTab(localStorage.getItem('dexmon-tab') || 'stats');
     fetchAndRender();
     setInterval(fetchAndRender, REFRESH_MS);
     setInterval(updateLastUpdated, 60 * 1000);
