@@ -291,4 +291,10 @@ func TestSend_LogsAlarmHistory(t *testing.T) {
 	if entries[0].AlarmName != "Low" {
 		t.Errorf("AlarmName: got %q, want %q", entries[0].AlarmName, "Low")
 	}
+	if entries[0].Recipient != "brandon" {
+		t.Errorf("Recipient: got %q, want %q", entries[0].Recipient, "brandon")
+	}
+	if !entries[0].FiredAt.Equal(now) {
+		t.Errorf("FiredAt: got %v, want %v", entries[0].FiredAt, now)
+	}
 }
