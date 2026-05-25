@@ -45,6 +45,7 @@ type SendRequest struct {
 	UserKey   string
 	Message   string
 	Alarm     config.AlarmConfig
+	BGValue   int
 }
 
 func (d *Dispatcher) Send(req SendRequest, now time.Time) error {
@@ -107,7 +108,15 @@ func (d *Dispatcher) Send(req SendRequest, now time.Time) error {
 		receiptExpiresAt = &t
 	}
 
-	return d.store.UpdateFiredState(req.Account, req.AlarmName, req.Recipient, now, receiptID, receiptExpiresAt)
+	if err := d.store.UpdateFiredState(req.Account, req.AlarmName, req.Recipient, now, receiptID, receiptExpiresAt); err != nil {
+		return err
+	}
+	if req.BGValue != 0 {
+		if err := d.store.LogAlarmFired(req.Account, req.AlarmName, req.Recipient, now, req.BGValue); err != nil {
+			log.Printf("[%s] alarm history log failed: %v", req.Account, err)
+		}
+	}
+	return nil
 }
 
 func priorityCode(p string) int {

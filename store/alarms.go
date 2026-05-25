@@ -141,3 +141,39 @@ func nullString(s *string) sql.NullString {
 	}
 	return sql.NullString{String: *s, Valid: true}
 }
+
+func (s *Store) LogAlarmFired(account, alarmName, recipient string, firedAt time.Time, bgValue int) error {
+	_, err := s.db.Exec(
+		`INSERT INTO alarm_history (account, alarm_name, recipient, fired_at, bg_value)
+		 VALUES (?, ?, ?, ?, ?)`,
+		account, alarmName, recipient, firedAt.UTC(), bgValue,
+	)
+	return err
+}
+
+func (s *Store) GetAlarmHistory(account string, since time.Time) ([]types.AlarmHistoryEntry, error) {
+	rows, err := s.db.Query(
+		`SELECT alarm_name, MIN(recipient) AS recipient, fired_at, MIN(bg_value) AS bg_value
+		 FROM alarm_history
+		 WHERE account = ? AND fired_at >= ?
+		 GROUP BY account, alarm_name, fired_at
+		 ORDER BY fired_at DESC`,
+		account, since.UTC(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	entries := make([]types.AlarmHistoryEntry, 0)
+	for rows.Next() {
+		var e types.AlarmHistoryEntry
+		var firedAt time.Time
+		if err := rows.Scan(&e.AlarmName, &e.Recipient, &firedAt, &e.BGValue); err != nil {
+			return nil, err
+		}
+		e.FiredAt = firedAt.UTC()
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}

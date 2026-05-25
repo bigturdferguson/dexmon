@@ -35,3 +35,10 @@ type AlarmState struct {
 	ReceiptExpiresAt *time.Time
 	Rearmed          bool
 }
+
+type AlarmHistoryEntry struct {
+	AlarmName string
+	Recipient string
+	FiredAt   time.Time
+	BGValue   int
+}

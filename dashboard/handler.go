@@ -21,15 +21,16 @@ type TargetJSON struct {
 
 // DashboardResponse is the JSON shape returned by GET /api/dashboard.
 type DashboardResponse struct {
-	Account  string        `json:"account"`
-	AsOf     time.Time     `json:"as_of"`
-	Window   string        `json:"window"`
-	Target   TargetJSON    `json:"target"`
-	Current  *ReadingJSON  `json:"current"`
-	Previous *ReadingJSON  `json:"previous"`
-	Stats    StatsJSON     `json:"stats"`
-	Readings []ReadingJSON `json:"readings"`
-	Alarms   []AlarmJSON   `json:"alarms"`
+	Account      string             `json:"account"`
+	AsOf         time.Time          `json:"as_of"`
+	Window       string             `json:"window"`
+	Target       TargetJSON         `json:"target"`
+	Current      *ReadingJSON       `json:"current"`
+	Previous     *ReadingJSON       `json:"previous"`
+	Stats        StatsJSON          `json:"stats"`
+	Readings     []ReadingJSON      `json:"readings"`
+	Alarms       []AlarmJSON        `json:"alarms"`
+	AlarmHistory []AlarmHistoryJSON `json:"alarm_history"`
 }
 
 type ReadingJSON struct {
@@ -50,6 +51,12 @@ type AlarmJSON struct {
 	LastFiredAt  *time.Time `json:"last_fired_at"`
 	Status       string     `json:"status"`
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
+}
+
+type AlarmHistoryJSON struct {
+	AlarmName string    `json:"alarm_name"`
+	FiredAt   time.Time `json:"fired_at"`
+	BGValue   int       `json:"bg_value"`
 }
 
 var statusRank = map[string]int{
@@ -128,15 +135,21 @@ func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	history, err := h.store.GetAlarmHistory(h.account, since)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 
 	resp := DashboardResponse{
-		Account:  h.account,
-		AsOf:     now,
-		Window:   window,
-		Target:   TargetJSON{Low: h.targetLow, High: h.targetHigh},
-		Stats:    StatsJSON{High: maxVal, Low: minVal, Avg: avgVal},
-		Readings: toReadingJSON(readings),
-		Alarms:   h.buildAlarmList(now),
+		Account:      h.account,
+		AsOf:         now,
+		Window:       window,
+		Target:       TargetJSON{Low: h.targetLow, High: h.targetHigh},
+		Stats:        StatsJSON{High: maxVal, Low: minVal, Avg: avgVal},
+		Readings:     toReadingJSON(readings),
+		Alarms:       h.buildAlarmList(now),
+		AlarmHistory: toAlarmHistoryJSON(history),
 	}
 
 	if n := len(readings); n > 0 {
@@ -214,6 +227,18 @@ func toReadingJSON(readings []types.Reading) []ReadingJSON {
 	out := make([]ReadingJSON, len(readings))
 	for i, r := range readings {
 		out[i] = ReadingJSON{Value: r.Value, Trend: string(r.Trend), RecordedAt: r.RecordedAt}
+	}
+	return out
+}
+
+func toAlarmHistoryJSON(entries []types.AlarmHistoryEntry) []AlarmHistoryJSON {
+	out := make([]AlarmHistoryJSON, len(entries))
+	for i, e := range entries {
+		out[i] = AlarmHistoryJSON{
+			AlarmName: e.AlarmName,
+			FiredAt:   e.FiredAt,
+			BGValue:   e.BGValue,
+		}
 	}
 	return out
 }
