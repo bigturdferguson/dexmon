@@ -261,7 +261,7 @@ func TestGetReadingStats_ReturnsCorrectValues(t *testing.T) {
 	}
 }
 
-func TestClearAlarmRearm_ClearsLastFiredAndSnooze(t *testing.T) {
+func TestClearAlarmRearm_PreservesLastFiredAtAndSetsRearmed(t *testing.T) {
 	s := newTestStore(t)
 	now := time.Now().UTC().Truncate(time.Second)
 	snooze := now.Add(30 * time.Minute)
@@ -288,13 +288,15 @@ func TestClearAlarmRearm_ClearsLastFiredAndSnooze(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAlarmState after clear: %v", err)
 	}
-	if got.LastFiredAt != nil {
-		t.Error("expected LastFiredAt cleared")
+	if got.LastFiredAt == nil || !got.LastFiredAt.Equal(now) {
+		t.Error("expected LastFiredAt preserved after ClearAlarmRearm")
+	}
+	if !got.Rearmed {
+		t.Error("expected Rearmed=true after ClearAlarmRearm")
 	}
 	if got.SnoozedUntil != nil {
-		t.Error("expected SnoozedUntil cleared")
+		t.Error("expected SnoozedUntil cleared after ClearAlarmRearm")
 	}
-	// receipt_id preserved — ClearAlarmRearm only clears backoff/snooze
 	if got.ReceiptID == nil || *got.ReceiptID != rid {
 		t.Errorf("expected ReceiptID preserved, got %v", got.ReceiptID)
 	}
@@ -308,5 +310,41 @@ func TestGetAlarmState_ReturnsRearmedFalseByDefault(t *testing.T) {
 	}
 	if got.Rearmed {
 		t.Error("expected Rearmed=false for fresh state")
+	}
+}
+
+func TestUpdateFiredState_ClearsRearmed(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	// Fire, then rearm.
+	if err := s.UpdateFiredState("jessica", "Low", "brandon", now, nil, nil); err != nil {
+		t.Fatalf("UpdateFiredState: %v", err)
+	}
+	if err := s.ClearAlarmRearm("jessica", "Low", "brandon"); err != nil {
+		t.Fatalf("ClearAlarmRearm: %v", err)
+	}
+	mid, err := s.GetAlarmState("jessica", "Low", "brandon")
+	if err != nil {
+		t.Fatalf("GetAlarmState: %v", err)
+	}
+	if !mid.Rearmed {
+		t.Fatal("setup: expected Rearmed=true after ClearAlarmRearm")
+	}
+
+	// Fire again — rearmed should clear.
+	later := now.Add(time.Hour)
+	if err := s.UpdateFiredState("jessica", "Low", "brandon", later, nil, nil); err != nil {
+		t.Fatalf("UpdateFiredState (second): %v", err)
+	}
+	got, err := s.GetAlarmState("jessica", "Low", "brandon")
+	if err != nil {
+		t.Fatalf("GetAlarmState after second fire: %v", err)
+	}
+	if got.Rearmed {
+		t.Error("expected Rearmed=false after UpdateFiredState")
+	}
+	if got.LastFiredAt == nil || !got.LastFiredAt.Equal(later) {
+		t.Errorf("expected LastFiredAt=%v, got %v", later, got.LastFiredAt)
 	}
 }
