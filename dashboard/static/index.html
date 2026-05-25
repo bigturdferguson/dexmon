@@ -527,6 +527,89 @@
       }
     };
 
+    // ── night bands plugin ─────────────────────────────────────────────────
+    function isNightHour(isoStr) {
+      const h = new Date(isoStr).getHours();
+      return h >= 22 || h < 6;
+    }
+
+    function drawNightBands(chart) {
+      const { ctx, chartArea, scales } = chart;
+      const readings = chart._rulerReadings;
+      const xScale = scales.x;
+      const color = document.documentElement.classList.contains('dark')
+        ? 'rgba(255,255,255,0.04)'
+        : 'rgba(15,23,42,0.06)';
+
+      ctx.save();
+      ctx.fillStyle = color;
+
+      let inBand = false;
+      let bandStart = 0;
+
+      for (let i = 0; i < readings.length; i++) {
+        const night = isNightHour(readings[i].recorded_at);
+        if (night && !inBand) {
+          inBand = true;
+          bandStart = i;
+        } else if (!night && inBand) {
+          inBand = false;
+          const x1 = xScale.getPixelForValue(bandStart);
+          const x2 = xScale.getPixelForValue(i);
+          ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
+        }
+      }
+      if (inBand) {
+        const x1 = xScale.getPixelForValue(bandStart);
+        const x2 = xScale.getPixelForValue(readings.length - 1);
+        ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
+      }
+
+      ctx.restore();
+    }
+
+    function drawBoundaryLines(chart, w) {
+      const { ctx, chartArea, scales } = chart;
+      const readings = chart._rulerReadings;
+      const xScale = scales.x;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(100,116,139,0.25)';
+      ctx.lineWidth = 1;
+
+      readings.forEach((r, i) => {
+        const dt = new Date(r.recorded_at);
+        let isBoundary = false;
+        if (w === '30d') {
+          isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 7 === 0;
+        } else {
+          isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1;
+        }
+        if (!isBoundary) return;
+        const x = xScale.getPixelForValue(i);
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    }
+
+    const nightBandsPlugin = {
+      id: 'nightBands',
+      beforeDraw(chart) {
+        const w = chart._rulerWindow;
+        const readings = chart._rulerReadings;
+        if (!w || !readings?.length) return;
+        if (w === '30d' || w === '90d') {
+          drawBoundaryLines(chart, w);
+        } else {
+          drawNightBands(chart);
+        }
+      }
+    };
+
     // ── render ─────────────────────────────────────────────────────────────
     function renderWidgets(d) {
       const cur = d.current, prev = d.previous;
@@ -602,7 +685,7 @@
       const ctx = document.getElementById('bg-chart').getContext('2d');
       chart = new Chart(ctx, {
         type: 'line',
-        plugins: [rulerPlugin],
+        plugins: [rulerPlugin, nightBandsPlugin],
         data: {
           labels,
           datasets: [
