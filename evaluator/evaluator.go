@@ -80,7 +80,7 @@ func shouldFire(alarm config.AlarmConfig, state *types.AlarmState, now time.Time
 	if state.ReceiptID != nil && state.ReceiptExpiresAt != nil && now.Before(*state.ReceiptExpiresAt) {
 		return false
 	}
-	if alarm.Priority != "emergency" && alarm.Backoff != "" && state.LastFiredAt != nil {
+	if !state.Rearmed && alarm.Priority != "emergency" && alarm.Backoff != "" && state.LastFiredAt != nil {
 		backoff, err := time.ParseDuration(alarm.Backoff)
 		if err == nil && now.Sub(*state.LastFiredAt) < backoff {
 			return false

@@ -277,3 +277,23 @@ func TestEvaluate_EmergencyIgnoresBackoff(t *testing.T) {
 		t.Errorf("expected emergency alarm to fire despite backoff state, got %d fire results", len(fire))
 	}
 }
+
+func TestEvaluate_FiresImmediatelyAfterRearm(t *testing.T) {
+	store := newMockStore()
+	recent := time.Now().UTC().Add(-5 * time.Minute) // within the 30m backoff window
+	store.set("jessica", "Low", "brandon", &types.AlarmState{
+		LastFiredAt: &recent,
+		Rearmed:     true,
+	})
+
+	reading := types.Reading{Account: "jessica", Value: 65, Trend: types.TrendFlat}
+	now := time.Now().UTC()
+
+	fire, _, err := evaluator.Evaluate("jessica", []config.AlarmConfig{baseAlarm}, reading, store, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fire) != 1 {
+		t.Errorf("expected alarm to fire when rearmed (backoff should be bypassed), got %d fire results", len(fire))
+	}
+}
