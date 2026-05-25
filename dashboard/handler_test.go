@@ -282,3 +282,142 @@ func TestDashboardAPI_TargetRange(t *testing.T) {
 		t.Errorf("expected Target.High=140, got %d", resp.Target.High)
 	}
 }
+
+func TestDashboardAPI_WindowDefault(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "24h" {
+		t.Errorf("expected window=24h, got %q", resp.Window)
+	}
+}
+
+func TestDashboardAPI_Window7d(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=7d")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "7d" {
+		t.Errorf("expected window=7d, got %q", resp.Window)
+	}
+}
+
+func TestDashboardAPI_WindowInvalidFallsBack(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=bogus")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "24h" {
+		t.Errorf("expected window=24h for invalid input, got %q", resp.Window)
+	}
+}
+
+func TestDashboardAPI_Window12h(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=12h")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "12h" {
+		t.Errorf("expected window=12h, got %q", resp.Window)
+	}
+}
+
+func TestDashboardAPI_Window30d(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=30d")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "30d" {
+		t.Errorf("expected window=30d, got %q", resp.Window)
+	}
+}
+
+func TestDashboardAPI_Window12h_FiltersOldReadings(t *testing.T) {
+	s := newTestStore(t)
+
+	// Insert a reading 25 hours ago (outside 12h window)
+	if err := s.InsertReading(types.Reading{
+		Account:    "noah",
+		Value:      200,
+		RecordedAt: time.Now().UTC().Add(-25 * time.Hour),
+		Trend:      types.TrendFlat,
+	}); err != nil {
+		t.Fatalf("save old reading: %v", err)
+	}
+
+	// Insert a reading 1 hour ago (inside 12h window)
+	if err := s.InsertReading(types.Reading{
+		Account:    "noah",
+		Value:      120,
+		RecordedAt: time.Now().UTC().Add(-1 * time.Hour),
+		Trend:      types.TrendFlat,
+	}); err != nil {
+		t.Fatalf("save recent reading: %v", err)
+	}
+
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=12h")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	// The 25h-old reading (value 200) must not appear in the windowed response
+	for _, r := range resp.Readings {
+		if r.Value == 200 {
+			t.Errorf("old reading (200, 25h ago) should be filtered out by 12h window, but it appeared in resp.Readings")
+		}
+	}
+
+	// The recent reading (value 120) must appear
+	found := false
+	for _, r := range resp.Readings {
+		if r.Value == 120 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("recent reading (120, 1h ago) should appear in 12h window response, but it did not")
+	}
+}
