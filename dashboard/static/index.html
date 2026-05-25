@@ -470,7 +470,16 @@
             legend: { display: false },
             tooltip: {
               filter: item => item.datasetIndex === 0,
-              callbacks: { label: ctx => 'BG: ' + ctx.parsed.y },
+              callbacks: {
+                title: ctx => {
+                  const r = lastData.readings[ctx[0].dataIndex];
+                  return new Date(r.recorded_at).toLocaleString([], {
+                    month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                  });
+                },
+                label: ctx => 'BG: ' + ctx.parsed.y,
+              },
             },
           },
           scales: {
