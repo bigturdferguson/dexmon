@@ -134,6 +134,17 @@
       margin-bottom: 1rem;
     }
     .chart-wrap { position: relative; height: 220px; }
+    /* ── Fullscreen chart ── */
+    .card.fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      margin: 0;
+      border-radius: 0;
+      padding: 1.5rem;
+      overflow: hidden;
+    }
+    .card.fullscreen .chart-wrap { height: calc(100vh - 80px); }
     .card-header {
       display: flex;
       align-items: center;
@@ -231,11 +242,14 @@
     <div class="card">
       <div class="card-header">
         <div class="card-title" id="chart-title">BG — Last 24 Hours</div>
-        <div class="window-pills">
-          <button class="pill" data-window="12h" onclick="setWindow('12h')">12h</button>
-          <button class="pill" data-window="24h" onclick="setWindow('24h')">24h</button>
-          <button class="pill" data-window="7d"  onclick="setWindow('7d')">7d</button>
-          <button class="pill" data-window="30d" onclick="setWindow('30d')">30d</button>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <div class="window-pills">
+            <button class="pill" data-window="12h" onclick="setWindow('12h')">12h</button>
+            <button class="pill" data-window="24h" onclick="setWindow('24h')">24h</button>
+            <button class="pill" data-window="7d"  onclick="setWindow('7d')">7d</button>
+            <button class="pill" data-window="30d" onclick="setWindow('30d')">30d</button>
+          </div>
+          <button id="fullscreen-btn" onclick="toggleFullscreen()" style="background:none;border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;cursor:pointer;font-size:0.9rem;color:var(--text);line-height:1.4;" title="Toggle fullscreen">⤢</button>
         </div>
       </div>
       <div class="chart-wrap"><canvas id="bg-chart"></canvas></div>
@@ -339,6 +353,25 @@
       if (chart) { chart.destroy(); chart = null; }
       fetchAndRender();
     }
+
+    // ── fullscreen ─────────────────────────────────────────────────────────
+    let fullscreenCard = null;
+
+    function toggleFullscreen() {
+      if (!fullscreenCard) fullscreenCard = document.getElementById('fullscreen-btn').closest('.card');
+      fullscreenCard.classList.toggle('fullscreen');
+      const on = fullscreenCard.classList.contains('fullscreen');
+      document.getElementById('fullscreen-btn').textContent = on ? '⤡' : '⤢';
+      if (chart) chart.resize();
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && fullscreenCard && fullscreenCard.classList.contains('fullscreen')) {
+        fullscreenCard.classList.remove('fullscreen');
+        document.getElementById('fullscreen-btn').textContent = '⤢';
+        if (chart) chart.resize();
+      }
+    });
 
     function chartLabel(isoStr, w) {
       const dt = new Date(isoStr);
