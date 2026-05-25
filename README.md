@@ -12,13 +12,14 @@ The dashboard is available at `https://<appname>.fly.dev/` and auto-refreshes ev
 |--------|-------|
 | Current BG | Value, trend arrow (↑↑ ↑ ↗ → ↘ ↓ ↓↓), and time since reading |
 | Previous | Prior reading value and age |
-| High | Maximum BG over the last 24 hours |
-| Low | Minimum BG over the last 24 hours |
-| Avg | Integer average BG over the last 24 hours |
-| BG Graph | 24-hour line chart with a shaded target range band |
+| High | Maximum BG over the selected window |
+| Low | Minimum BG over the selected window |
+| Avg | Integer average BG over the selected window |
+| BG Graph | Line chart with a shaded target range band; hover a point to see the exact BG value and timestamp. ⤢ button expands the chart to fullscreen — ESC exits. |
 | Alarms | Per-alarm name, priority, last fired time, and current status |
+| Alarm History | Chronological log of every alarm firing within the selected window: alarm name, BG at fire time, and timestamp (newest first) |
 
-Supports light and dark themes — toggle with the button in the header. Preference is saved across page loads.
+Time window pills (1h / 3h / 6h / 12h / 24h) in the chart header control the range shown across all widgets. Supports light and dark themes — toggle with the button in the header. Preferences are saved across page loads.
 
 ---
 
