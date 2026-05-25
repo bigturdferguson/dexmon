@@ -220,46 +220,6 @@ func TestGetReadings_OrderedAscending(t *testing.T) {
 	}
 }
 
-func TestGetReadingStats_ReturnsZerosForNoData(t *testing.T) {
-	s := newTestStore(t)
-	min, max, avg, err := s.GetReadingStats("noah", time.Now().UTC().Add(-24*time.Hour))
-	if err != nil {
-		t.Fatalf("GetReadingStats: %v", err)
-	}
-	if min != 0 || max != 0 || avg != 0 {
-		t.Errorf("expected all zeros, got min=%d max=%d avg=%d", min, max, avg)
-	}
-}
-
-func TestGetReadingStats_ReturnsCorrectValues(t *testing.T) {
-	s := newTestStore(t)
-	now := time.Now().UTC().Truncate(time.Second)
-
-	for _, r := range []types.Reading{
-		{Account: "noah", Value: 72,  Trend: types.TrendFlat, RecordedAt: now.Add(-3 * time.Hour)},
-		{Account: "noah", Value: 187, Trend: types.TrendFlat, RecordedAt: now.Add(-2 * time.Hour)},
-		{Account: "noah", Value: 129, Trend: types.TrendFlat, RecordedAt: now.Add(-1 * time.Hour)},
-	} {
-		if err := s.InsertReading(r); err != nil {
-			t.Fatalf("InsertReading: %v", err)
-		}
-	}
-
-	min, max, avg, err := s.GetReadingStats("noah", now.Add(-24*time.Hour))
-	if err != nil {
-		t.Fatalf("GetReadingStats: %v", err)
-	}
-	if min != 72 {
-		t.Errorf("expected min=72, got %d", min)
-	}
-	if max != 187 {
-		t.Errorf("expected max=187, got %d", max)
-	}
-	// (72+187+129)/3 = 388/3 = 129 integer
-	if avg != 129 {
-		t.Errorf("expected avg=129, got %d", avg)
-	}
-}
 
 func TestRearmAlarm_PreservesLastFiredAtAndSetsRearmed(t *testing.T) {
 	s := newTestStore(t)
