@@ -261,7 +261,7 @@ func TestGetReadingStats_ReturnsCorrectValues(t *testing.T) {
 	}
 }
 
-func TestClearAlarmRearm_PreservesLastFiredAtAndSetsRearmed(t *testing.T) {
+func TestRearmAlarm_PreservesLastFiredAtAndSetsRearmed(t *testing.T) {
 	s := newTestStore(t)
 	now := time.Now().UTC().Truncate(time.Second)
 	snooze := now.Add(30 * time.Minute)
@@ -280,8 +280,8 @@ func TestClearAlarmRearm_PreservesLastFiredAtAndSetsRearmed(t *testing.T) {
 		t.Fatalf("setup UpsertAlarmState: %v", err)
 	}
 
-	if err := s.ClearAlarmRearm("jessica", "Low", "brandon"); err != nil {
-		t.Fatalf("ClearAlarmRearm: %v", err)
+	if err := s.RearmAlarm("jessica", "Low", "brandon"); err != nil {
+		t.Fatalf("RearmAlarm: %v", err)
 	}
 
 	got, err := s.GetAlarmState("jessica", "Low", "brandon")
@@ -289,13 +289,13 @@ func TestClearAlarmRearm_PreservesLastFiredAtAndSetsRearmed(t *testing.T) {
 		t.Fatalf("GetAlarmState after clear: %v", err)
 	}
 	if got.LastFiredAt == nil || !got.LastFiredAt.Equal(now) {
-		t.Error("expected LastFiredAt preserved after ClearAlarmRearm")
+		t.Error("expected LastFiredAt preserved after RearmAlarm")
 	}
 	if !got.Rearmed {
-		t.Error("expected Rearmed=true after ClearAlarmRearm")
+		t.Error("expected Rearmed=true after RearmAlarm")
 	}
 	if got.SnoozedUntil != nil {
-		t.Error("expected SnoozedUntil cleared after ClearAlarmRearm")
+		t.Error("expected SnoozedUntil cleared after RearmAlarm")
 	}
 	if got.ReceiptID == nil || *got.ReceiptID != rid {
 		t.Errorf("expected ReceiptID preserved, got %v", got.ReceiptID)
@@ -321,15 +321,15 @@ func TestUpdateFiredState_ClearsRearmed(t *testing.T) {
 	if err := s.UpdateFiredState("jessica", "Low", "brandon", now, nil, nil); err != nil {
 		t.Fatalf("UpdateFiredState: %v", err)
 	}
-	if err := s.ClearAlarmRearm("jessica", "Low", "brandon"); err != nil {
-		t.Fatalf("ClearAlarmRearm: %v", err)
+	if err := s.RearmAlarm("jessica", "Low", "brandon"); err != nil {
+		t.Fatalf("RearmAlarm: %v", err)
 	}
 	mid, err := s.GetAlarmState("jessica", "Low", "brandon")
 	if err != nil {
 		t.Fatalf("GetAlarmState: %v", err)
 	}
 	if !mid.Rearmed {
-		t.Fatal("setup: expected Rearmed=true after ClearAlarmRearm")
+		t.Fatal("setup: expected Rearmed=true after RearmAlarm")
 	}
 
 	// Fire again — rearmed should clear.
@@ -346,5 +346,37 @@ func TestUpdateFiredState_ClearsRearmed(t *testing.T) {
 	}
 	if got.LastFiredAt == nil || !got.LastFiredAt.Equal(later) {
 		t.Errorf("expected LastFiredAt=%v, got %v", later, got.LastFiredAt)
+	}
+}
+
+func TestUpdateFiredState_PreservesSnoozedUntil(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+	snooze := now.Add(30 * time.Minute)
+
+	// Set up an existing state with snoozed_until.
+	state := types.AlarmState{
+		Account:      "jessica",
+		AlarmName:    "Low",
+		Recipient:    "brandon",
+		LastFiredAt:  &now,
+		SnoozedUntil: &snooze,
+	}
+	if err := s.UpsertAlarmState(state); err != nil {
+		t.Fatalf("setup UpsertAlarmState: %v", err)
+	}
+
+	// UpdateFiredState should not clear snoozed_until.
+	later := now.Add(time.Hour)
+	if err := s.UpdateFiredState("jessica", "Low", "brandon", later, nil, nil); err != nil {
+		t.Fatalf("UpdateFiredState: %v", err)
+	}
+
+	got, err := s.GetAlarmState("jessica", "Low", "brandon")
+	if err != nil {
+		t.Fatalf("GetAlarmState: %v", err)
+	}
+	if got.SnoozedUntil == nil || !got.SnoozedUntil.Equal(snooze) {
+		t.Errorf("expected SnoozedUntil=%v preserved by UpdateFiredState, got %v", snooze, got.SnoozedUntil)
 	}
 }

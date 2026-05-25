@@ -119,7 +119,7 @@ func (s *Store) UpdateFiredState(account, alarmName, recipient string, lastFired
 	return err
 }
 
-func (s *Store) ClearAlarmRearm(account, alarmName, recipient string) error {
+func (s *Store) RearmAlarm(account, alarmName, recipient string) error {
 	_, err := s.db.Exec(
 		`UPDATE alarm_state SET rearmed = 1, snoozed_until = NULL
 		 WHERE account = ? AND alarm_name = ? AND recipient = ?`,
