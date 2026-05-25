@@ -434,12 +434,10 @@
     }
 
     function updateWindowLabels(w) {
-      ['high', 'low', 'avg', 'stddev', 'cv', 'tir'].forEach(id => {
+      ['high', 'low', 'avg', 'stddev', 'cv', 'tir', 'quartiles'].forEach(id => {
         const el = document.getElementById('sub-' + id);
         if (el) el.textContent = w;
       });
-      const qEl = document.getElementById('sub-quartiles');
-      if (qEl) qEl.textContent = w;
       document.getElementById('chart-title').textContent = chartTitle(w);
       document.querySelectorAll('.pill').forEach(b => {
         b.classList.toggle('active', b.dataset.window === w);
@@ -489,10 +487,12 @@
           ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
           : '';
       }
-      // 90d: label on 1st of each month
-      return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1)
-        ? dt.toLocaleDateString([], { month: 'short' })
-        : '';
+      if (w === '90d') {
+        return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1)
+          ? dt.toLocaleDateString([], { month: 'short' })
+          : '';
+      }
+      return '';
     }
 
     function isMinorTick(isoStr, w) {
@@ -551,7 +551,7 @@
       // CV
       const cvEl = document.getElementById('val-cv');
       const cvVal = d.stats?.cv;
-      if (cvVal !== undefined && cvVal > 0) {
+      if (cvVal != null) {
         cvEl.textContent = cvVal + '%';
         cvEl.className = 'stat-value ' + (cvVal < 36 ? 'bg-normal' : 'bg-high');
       } else {
@@ -562,7 +562,7 @@
       // Time in Range
       const tirEl = document.getElementById('val-tir');
       const tirVal = d.stats?.time_in_range;
-      if (tirVal !== undefined) {
+      if (tirVal != null) {
         tirEl.textContent = tirVal + '%';
         tirEl.className = 'stat-value ' + (tirVal >= 70 ? 'bg-normal' : tirVal >= 54 ? 'bg-high' : 'bg-low');
         const bar = document.getElementById('tir-bar');
