@@ -421,3 +421,49 @@ func TestDashboardAPI_Window12h_FiltersOldReadings(t *testing.T) {
 		t.Errorf("recent reading (120, 1h ago) should appear in 12h window response, but it did not")
 	}
 }
+
+func TestDashboardAPI_AlarmHistory_InWindow(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	if err := s.LogAlarmFired("noah", "Low", "brandon", now.Add(-1*time.Hour), 68); err != nil {
+		t.Fatalf("LogAlarmFired: %v", err)
+	}
+	if err := s.LogAlarmFired("noah", "High", "brandon", now.Add(-25*time.Hour), 210); err != nil {
+		t.Fatalf("LogAlarmFired (out of window): %v", err)
+	}
+
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=24h")
+
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.AlarmHistory) != 1 {
+		t.Fatalf("expected 1 history entry in 24h window, got %d", len(resp.AlarmHistory))
+	}
+	if resp.AlarmHistory[0].AlarmName != "Low" {
+		t.Errorf("AlarmName: got %q, want %q", resp.AlarmHistory[0].AlarmName, "Low")
+	}
+	if resp.AlarmHistory[0].BGValue != 68 {
+		t.Errorf("BGValue: got %d, want 68", resp.AlarmHistory[0].BGValue)
+	}
+}
+
+func TestDashboardAPI_AlarmHistory_EmptyForNoFirings(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard")
+
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.AlarmHistory == nil {
+		t.Error("expected non-nil alarm_history slice (may be empty)")
+	}
+	if len(resp.AlarmHistory) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(resp.AlarmHistory))
+	}
+}
