@@ -253,3 +253,42 @@ func TestSend_LogsDispatch_EmergencyWithReceipt(t *testing.T) {
 		t.Errorf("expected emergency dispatch log with receipt, got: %q", got)
 	}
 }
+
+func TestSend_LogsAlarmHistory(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": 1})
+	}))
+	defer srv.Close()
+
+	st := newTestStore(t)
+	d := dispatcher.NewWithAPI(srv.URL, "app-token", st, "")
+	now := time.Now().UTC().Truncate(time.Second)
+
+	alarm := config.AlarmConfig{Name: "Low", Priority: "high", Backoff: "30m"}
+	err := d.Send(dispatcher.SendRequest{
+		Account:   "noah",
+		AlarmName: "Low",
+		Recipient: "brandon",
+		UserKey:   "user-key",
+		Message:   "Low: BG 68 ↓",
+		Alarm:     alarm,
+		BGValue:   68,
+	}, now)
+	if err != nil {
+		t.Fatalf("Send: %v", err)
+	}
+
+	entries, err := st.GetAlarmHistory("noah", now.Add(-1*time.Minute))
+	if err != nil {
+		t.Fatalf("GetAlarmHistory: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 history entry, got %d", len(entries))
+	}
+	if entries[0].BGValue != 68 {
+		t.Errorf("BGValue: got %d, want 68", entries[0].BGValue)
+	}
+	if entries[0].AlarmName != "Low" {
+		t.Errorf("AlarmName: got %q, want %q", entries[0].AlarmName, "Low")
+	}
+}

@@ -124,6 +124,7 @@ func (p *Poller) Tick() {
 			UserKey:   recipientCfg.PushoverUserKey,
 			Message:   formatMessage(*reading, result.Alarm),
 			Alarm:     result.Alarm,
+			BGValue:   reading.Value,
 		}
 		if err := p.disp.Send(req, now); err != nil {
 			log.Printf("[%s] dispatch to %s: %v", p.accountName, result.Recipient, err)
