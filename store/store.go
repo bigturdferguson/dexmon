@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -29,6 +30,14 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) migrate() error {
-	_, err := s.db.Exec(schema)
-	return err
+	if _, err := s.db.Exec(schema); err != nil {
+		return err
+	}
+	// Add rearmed column to existing databases. Fresh DBs already have it from
+	// schema above; SQLite returns "duplicate column name" in that case — ignore it.
+	_, err := s.db.Exec(`ALTER TABLE alarm_state ADD COLUMN rearmed INTEGER NOT NULL DEFAULT 0`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	return nil
 }

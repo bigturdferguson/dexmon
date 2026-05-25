@@ -17,10 +17,10 @@ func (s *Store) GetAlarmState(account, alarmName, recipient string) (*types.Alar
 	var lastFiredAt, snoozedUntil, receiptExpires sql.NullTime
 	var rid sql.NullString
 	err := s.db.QueryRow(
-		`SELECT id, last_fired_at, snoozed_until, receipt_id, receipt_expires_at
+		`SELECT id, last_fired_at, snoozed_until, receipt_id, receipt_expires_at, rearmed
 		 FROM alarm_state WHERE account = ? AND alarm_name = ? AND recipient = ?`,
 		account, alarmName, recipient,
-	).Scan(&state.ID, &lastFiredAt, &snoozedUntil, &rid, &receiptExpires)
+	).Scan(&state.ID, &lastFiredAt, &snoozedUntil, &rid, &receiptExpires, &state.Rearmed)
 	if errors.Is(err, sql.ErrNoRows) {
 		return state, nil
 	}
@@ -50,11 +50,11 @@ func (s *Store) GetAlarmStateByReceiptID(receiptID string) (*types.AlarmState, e
 	var lastFiredAt, snoozedUntil, receiptExpires sql.NullTime
 	var rid sql.NullString
 	err := s.db.QueryRow(
-		`SELECT id, account, alarm_name, recipient, last_fired_at, snoozed_until, receipt_id, receipt_expires_at
+		`SELECT id, account, alarm_name, recipient, last_fired_at, snoozed_until, receipt_id, receipt_expires_at, rearmed
 		 FROM alarm_state WHERE receipt_id = ?`,
 		receiptID,
 	).Scan(&state.ID, &state.Account, &state.AlarmName, &state.Recipient,
-		&lastFiredAt, &snoozedUntil, &rid, &receiptExpires)
+		&lastFiredAt, &snoozedUntil, &rid, &receiptExpires, &state.Rearmed)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -82,32 +82,35 @@ func (s *Store) GetAlarmStateByReceiptID(receiptID string) (*types.AlarmState, e
 func (s *Store) UpsertAlarmState(state types.AlarmState) error {
 	_, err := s.db.Exec(`
 		INSERT INTO alarm_state
-		    (account, alarm_name, recipient, last_fired_at, snoozed_until, receipt_id, receipt_expires_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		    (account, alarm_name, recipient, last_fired_at, snoozed_until, receipt_id, receipt_expires_at, rearmed)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(account, alarm_name, recipient) DO UPDATE SET
 		    last_fired_at      = excluded.last_fired_at,
 		    snoozed_until      = excluded.snoozed_until,
 		    receipt_id         = excluded.receipt_id,
-		    receipt_expires_at = excluded.receipt_expires_at`,
+		    receipt_expires_at = excluded.receipt_expires_at,
+		    rearmed            = excluded.rearmed`,
 		state.Account, state.AlarmName, state.Recipient,
 		nullTime(state.LastFiredAt),
 		nullTime(state.SnoozedUntil),
 		nullString(state.ReceiptID),
 		nullTime(state.ReceiptExpiresAt),
+		state.Rearmed,
 	)
 	return err
 }
 
-// UpdateFiredState sets last_fired_at and optionally receipt_id/receipt_expires_at
-// without touching snoozed_until. Use this instead of UpsertAlarmState when dispatching.
+// UpdateFiredState sets last_fired_at and optionally receipt_id/receipt_expires_at,
+// and clears rearmed. Use this instead of UpsertAlarmState when dispatching.
 func (s *Store) UpdateFiredState(account, alarmName, recipient string, lastFiredAt time.Time, receiptID *string, receiptExpiresAt *time.Time) error {
 	_, err := s.db.Exec(`
-		INSERT INTO alarm_state (account, alarm_name, recipient, last_fired_at, receipt_id, receipt_expires_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO alarm_state (account, alarm_name, recipient, last_fired_at, receipt_id, receipt_expires_at, rearmed)
+		VALUES (?, ?, ?, ?, ?, ?, 0)
 		ON CONFLICT(account, alarm_name, recipient) DO UPDATE SET
 		    last_fired_at      = excluded.last_fired_at,
 		    receipt_id         = excluded.receipt_id,
-		    receipt_expires_at = excluded.receipt_expires_at`,
+		    receipt_expires_at = excluded.receipt_expires_at,
+		    rearmed            = 0`,
 		account, alarmName, recipient,
 		lastFiredAt.UTC(),
 		nullString(receiptID),
@@ -116,9 +119,9 @@ func (s *Store) UpdateFiredState(account, alarmName, recipient string, lastFired
 	return err
 }
 
-func (s *Store) ClearAlarmRearm(account, alarmName, recipient string) error {
+func (s *Store) RearmAlarm(account, alarmName, recipient string) error {
 	_, err := s.db.Exec(
-		`UPDATE alarm_state SET last_fired_at = NULL, snoozed_until = NULL
+		`UPDATE alarm_state SET rearmed = 1, snoozed_until = NULL
 		 WHERE account = ? AND alarm_name = ? AND recipient = ?`,
 		account, alarmName, recipient,
 	)

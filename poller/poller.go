@@ -108,7 +108,7 @@ func (p *Poller) Tick() {
 	}
 
 	for _, result := range toRearm {
-		if err := p.store.ClearAlarmRearm(p.accountName, result.AlarmName, result.Recipient); err != nil {
+		if err := p.store.RearmAlarm(p.accountName, result.AlarmName, result.Recipient); err != nil {
 			log.Printf("[%s] clear alarm rearm: %v", p.accountName, err)
 		} else {
 			log.Printf("[%s] alarm %q rearmed for %s", p.accountName, result.AlarmName, result.Recipient)
