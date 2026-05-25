@@ -266,6 +266,18 @@
         </tbody>
       </table>
     </div>
+
+    <div class="card">
+      <div class="card-title">Alarm History</div>
+      <table>
+        <thead>
+          <tr><th>Alarm</th><th>BG</th><th>Time</th></tr>
+        </thead>
+        <tbody id="alarm-history-rows">
+          <tr><td colspan="3" class="text-muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </main>
 
   <script>
@@ -568,6 +580,25 @@
       }).join('');
     }
 
+    function renderAlarmHistory(history) {
+      const tbody = document.getElementById('alarm-history-rows');
+      if (!history || !history.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">No alarms fired in this window.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = history.map(e => {
+        const t = new Date(e.fired_at).toLocaleString([], {
+          month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        });
+        return `<tr>
+          <td>${esc(e.alarm_name)}</td>
+          <td>${esc(e.bg_value)}</td>
+          <td>${t}</td>
+        </tr>`;
+      }).join('');
+    }
+
     function updateLastUpdated() {
       if (!lastAsOf) return;
       document.getElementById('last-updated').textContent = 'Last updated: ' + timeAgo(lastAsOf);
@@ -584,6 +615,7 @@
         renderWidgets(d);
         renderChart(d.readings || []);
         renderAlarms(d.alarms || []);
+        renderAlarmHistory(d.alarm_history || []);
         updateLastUpdated();
         updateWindowLabels(d.window || '24h');
         const el = document.getElementById('last-updated');
