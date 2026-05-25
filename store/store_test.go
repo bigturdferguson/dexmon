@@ -482,3 +482,31 @@ func TestGetAlarmHistory_IsolatedByAccount(t *testing.T) {
 		t.Errorf("expected 0 entries for noah when only jessica has history, got %d", len(entries))
 	}
 }
+
+func TestGetAlarmHistory_DeduplicatesMultiRecipient(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+	firedAt := now.Add(-1 * time.Hour)
+
+	// Same alarm fired to two recipients at the same time
+	if err := s.LogAlarmFired("noah", "Low", "alice", firedAt, 68); err != nil {
+		t.Fatalf("LogAlarmFired (alice): %v", err)
+	}
+	if err := s.LogAlarmFired("noah", "Low", "brandon", firedAt, 68); err != nil {
+		t.Fatalf("LogAlarmFired (brandon): %v", err)
+	}
+
+	entries, err := s.GetAlarmHistory("noah", now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetAlarmHistory: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 deduplicated entry for multi-recipient alarm, got %d", len(entries))
+	}
+	if entries[0].AlarmName != "Low" {
+		t.Errorf("AlarmName: got %q, want %q", entries[0].AlarmName, "Low")
+	}
+	if entries[0].BGValue != 68 {
+		t.Errorf("BGValue: got %d, want 68", entries[0].BGValue)
+	}
+}

@@ -65,6 +65,9 @@ func TestDashboardAPI_EmptyData(t *testing.T) {
 	if resp.Alarms == nil {
 		t.Error("expected non-nil alarms slice (may be empty)")
 	}
+	if resp.AlarmHistory == nil {
+		t.Error("expected non-nil alarm_history slice (may be empty)")
+	}
 }
 
 func TestDashboardAPI_PopulatedData(t *testing.T) {
