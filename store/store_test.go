@@ -380,3 +380,88 @@ func TestUpdateFiredState_PreservesSnoozedUntil(t *testing.T) {
 		t.Errorf("expected SnoozedUntil=%v preserved by UpdateFiredState, got %v", snooze, got.SnoozedUntil)
 	}
 }
+
+func TestLogAlarmFired_AppearsInGetAlarmHistory(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	if err := s.LogAlarmFired("noah", "Low", "brandon", now, 68); err != nil {
+		t.Fatalf("LogAlarmFired: %v", err)
+	}
+
+	entries, err := s.GetAlarmHistory("noah", now.Add(-1*time.Hour))
+	if err != nil {
+		t.Fatalf("GetAlarmHistory: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].AlarmName != "Low" {
+		t.Errorf("AlarmName: got %q, want %q", entries[0].AlarmName, "Low")
+	}
+	if entries[0].BGValue != 68 {
+		t.Errorf("BGValue: got %d, want 68", entries[0].BGValue)
+	}
+	if !entries[0].FiredAt.Equal(now) {
+		t.Errorf("FiredAt: got %v, want %v", entries[0].FiredAt, now)
+	}
+}
+
+func TestGetAlarmHistory_OrderedNewestFirst(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+	earlier := now.Add(-2 * time.Hour)
+	later := now.Add(-1 * time.Hour)
+
+	if err := s.LogAlarmFired("noah", "Low", "brandon", earlier, 65); err != nil {
+		t.Fatalf("LogAlarmFired (earlier): %v", err)
+	}
+	if err := s.LogAlarmFired("noah", "High", "brandon", later, 210); err != nil {
+		t.Fatalf("LogAlarmFired (later): %v", err)
+	}
+
+	entries, err := s.GetAlarmHistory("noah", now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetAlarmHistory: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(entries))
+	}
+	if entries[0].FiredAt.Before(entries[1].FiredAt) {
+		t.Errorf("expected newest-first: entries[0]=%v entries[1]=%v", entries[0].FiredAt, entries[1].FiredAt)
+	}
+}
+
+func TestGetAlarmHistory_ExcludesEntriesBeforeSince(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	if err := s.LogAlarmFired("noah", "Low", "brandon", now.Add(-25*time.Hour), 68); err != nil {
+		t.Fatalf("LogAlarmFired (old): %v", err)
+	}
+	if err := s.LogAlarmFired("noah", "High", "brandon", now.Add(-1*time.Hour), 210); err != nil {
+		t.Fatalf("LogAlarmFired (recent): %v", err)
+	}
+
+	entries, err := s.GetAlarmHistory("noah", now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetAlarmHistory: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry in 24h window, got %d", len(entries))
+	}
+	if entries[0].BGValue != 210 {
+		t.Errorf("expected recent entry BG=210, got %d", entries[0].BGValue)
+	}
+}
+
+func TestGetAlarmHistory_ReturnsEmptyForNoData(t *testing.T) {
+	s := newTestStore(t)
+	entries, err := s.GetAlarmHistory("noah", time.Now().UTC().Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetAlarmHistory: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(entries))
+	}
+}
