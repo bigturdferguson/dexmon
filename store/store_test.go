@@ -465,3 +465,20 @@ func TestGetAlarmHistory_ReturnsEmptyForNoData(t *testing.T) {
 		t.Errorf("expected 0 entries, got %d", len(entries))
 	}
 }
+
+func TestGetAlarmHistory_IsolatedByAccount(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	if err := s.LogAlarmFired("jessica", "Low", "brandon", now.Add(-1*time.Hour), 68); err != nil {
+		t.Fatalf("LogAlarmFired (jessica): %v", err)
+	}
+
+	entries, err := s.GetAlarmHistory("noah", now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("GetAlarmHistory: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("expected 0 entries for noah when only jessica has history, got %d", len(entries))
+	}
+}

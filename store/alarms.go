@@ -164,7 +164,7 @@ func (s *Store) GetAlarmHistory(account string, since time.Time) ([]types.AlarmH
 	}
 	defer rows.Close()
 
-	var entries []types.AlarmHistoryEntry
+	entries := make([]types.AlarmHistoryEntry, 0)
 	for rows.Next() {
 		var e types.AlarmHistoryEntry
 		var firedAt time.Time
