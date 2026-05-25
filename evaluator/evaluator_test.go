@@ -297,3 +297,54 @@ func TestEvaluate_FiresImmediatelyAfterRearm(t *testing.T) {
 		t.Errorf("expected alarm to fire when rearmed (backoff should be bypassed), got %d fire results", len(fire))
 	}
 }
+
+func TestEvaluate_SnoozeWinsOverRearmed(t *testing.T) {
+	store := newMockStore()
+	snoozeUntil := time.Now().UTC().Add(10 * time.Minute)
+	store.set("jessica", "Low", "brandon", &types.AlarmState{
+		SnoozedUntil: &snoozeUntil,
+		Rearmed:      true,
+	})
+
+	reading := types.Reading{Account: "jessica", Value: 65, Trend: types.TrendFlat}
+	now := time.Now().UTC()
+
+	fire, _, err := evaluator.Evaluate("jessica", []config.AlarmConfig{baseAlarm}, reading, store, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fire) != 0 {
+		t.Errorf("expected alarm suppressed by snooze even when Rearmed=true, got %d fire results", len(fire))
+	}
+}
+
+func TestEvaluate_DoesNotClearRearmedAfterFiring(t *testing.T) {
+	store := newMockStore()
+	recent := time.Now().UTC().Add(-5 * time.Minute)
+	store.set("jessica", "Low", "brandon", &types.AlarmState{
+		LastFiredAt: &recent,
+		Rearmed:     true,
+	})
+
+	reading := types.Reading{Account: "jessica", Value: 65, Trend: types.TrendFlat}
+	now := time.Now().UTC()
+
+	// First evaluation: should fire because Rearmed bypasses backoff.
+	fire, _, err := evaluator.Evaluate("jessica", []config.AlarmConfig{baseAlarm}, reading, store, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fire) != 1 {
+		t.Fatalf("first evaluation: expected 1 fire result, got %d", len(fire))
+	}
+
+	// Evaluator does NOT clear Rearmed — the dispatcher does that via UpdateFiredState.
+	// Calling Evaluate again with the same store state still returns toFire.
+	fire2, _, err := evaluator.Evaluate("jessica", []config.AlarmConfig{baseAlarm}, reading, store, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fire2) != 1 {
+		t.Errorf("second evaluation: expected 1 fire result (Rearmed still true, dispatcher hasn't cleared it), got %d", len(fire2))
+	}
+}
