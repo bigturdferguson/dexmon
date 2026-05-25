@@ -434,9 +434,12 @@
     }
 
     function updateWindowLabels(w) {
-      ['high', 'low', 'avg'].forEach(id => {
-        document.getElementById('sub-' + id).textContent = w;
+      ['high', 'low', 'avg', 'stddev', 'cv', 'tir'].forEach(id => {
+        const el = document.getElementById('sub-' + id);
+        if (el) el.textContent = w;
       });
+      const qEl = document.getElementById('sub-quartiles');
+      if (qEl) qEl.textContent = w;
       document.getElementById('chart-title').textContent = chartTitle(w);
       document.querySelectorAll('.pill').forEach(b => {
         b.classList.toggle('active', b.dataset.window === w);
@@ -481,16 +484,22 @@
           ? dt.toLocaleDateString([], { weekday: 'short' })
           : '';
       }
-      // 30d: label ~every 5 days at midnight to avoid mobile density overflow
-      return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 5 === 1)
-        ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
+      if (w === '30d') {
+        return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 5 === 1)
+          ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
+          : '';
+      }
+      // 90d: label on 1st of each month
+      return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1)
+        ? dt.toLocaleDateString([], { month: 'short' })
         : '';
     }
 
     function isMinorTick(isoStr, w) {
       const dt = new Date(isoStr);
       if (w === '12h' || w === '24h') return dt.getMinutes() === 30;
-      // 7d and 30d: noon mark (halfway through each day)
+      if (w === '90d') return dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 15;
+      // 7d and 30d: noon mark
       return dt.getHours() === 12 && dt.getMinutes() === 0;
     }
 
@@ -535,6 +544,39 @@
       document.getElementById('val-high').textContent = d.stats?.high || '—';
       document.getElementById('val-low').textContent  = d.stats?.low  || '—';
       document.getElementById('val-avg').textContent  = d.stats?.avg  || '—';
+
+      // Std Dev
+      document.getElementById('val-stddev').textContent = d.stats?.std_dev ? '±' + d.stats.std_dev : '—';
+
+      // CV
+      const cvEl = document.getElementById('val-cv');
+      const cvVal = d.stats?.cv;
+      if (cvVal !== undefined && cvVal > 0) {
+        cvEl.textContent = cvVal + '%';
+        cvEl.className = 'stat-value ' + (cvVal < 36 ? 'bg-normal' : 'bg-high');
+      } else {
+        cvEl.textContent = '—';
+        cvEl.className = 'stat-value';
+      }
+
+      // Time in Range
+      const tirEl = document.getElementById('val-tir');
+      const tirVal = d.stats?.time_in_range;
+      if (tirVal !== undefined) {
+        tirEl.textContent = tirVal + '%';
+        tirEl.className = 'stat-value ' + (tirVal >= 70 ? 'bg-normal' : tirVal >= 54 ? 'bg-high' : 'bg-low');
+        const bar = document.getElementById('tir-bar');
+        bar.style.width = tirVal + '%';
+        bar.style.background = tirVal >= 70 ? cssVar('--normal') : tirVal >= 54 ? cssVar('--high') : cssVar('--low');
+      } else {
+        tirEl.textContent = '—';
+        tirEl.className = 'stat-value';
+      }
+
+      // Quartiles
+      document.getElementById('val-q1').textContent     = d.stats?.q1     || '—';
+      document.getElementById('val-median').textContent = d.stats?.median  || '—';
+      document.getElementById('val-q3').textContent     = d.stats?.q3      || '—';
     }
 
     function renderChart(readings) {
