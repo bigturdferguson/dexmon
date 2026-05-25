@@ -153,7 +153,7 @@ func (s *Store) LogAlarmFired(account, alarmName, recipient string, firedAt time
 
 func (s *Store) GetAlarmHistory(account string, since time.Time) ([]types.AlarmHistoryEntry, error) {
 	rows, err := s.db.Query(
-		`SELECT alarm_name, MIN(recipient) AS recipient, fired_at, bg_value
+		`SELECT alarm_name, MIN(recipient) AS recipient, fired_at, MIN(bg_value) AS bg_value
 		 FROM alarm_history
 		 WHERE account = ? AND fired_at >= ?
 		 GROUP BY account, alarm_name, fired_at

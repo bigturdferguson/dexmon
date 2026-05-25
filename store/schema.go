@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS alarm_history (
     alarm_name  TEXT    NOT NULL,
     recipient   TEXT    NOT NULL,
     fired_at    DATETIME NOT NULL,
-    bg_value    INTEGER NOT NULL
+    bg_value    INTEGER NOT NULL,
+    UNIQUE (account, alarm_name, recipient, fired_at)
 );
 CREATE INDEX IF NOT EXISTS idx_alarm_history_account_time ON alarm_history (account, fired_at DESC);
 `
