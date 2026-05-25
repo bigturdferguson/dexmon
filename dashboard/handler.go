@@ -179,6 +179,8 @@ func windowDuration(s string) (string, time.Duration) {
 		return "7d", 7 * 24 * time.Hour
 	case "30d":
 		return "30d", 30 * 24 * time.Hour
+	case "90d":
+		return "90d", 90 * 24 * time.Hour
 	default:
 		return "24h", 24 * time.Hour
 	}

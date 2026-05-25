@@ -470,3 +470,20 @@ func TestDashboardAPI_AlarmHistory_EmptyForNoFirings(t *testing.T) {
 		t.Errorf("expected 0 entries, got %d", len(resp.AlarmHistory))
 	}
 }
+
+func TestDashboardAPI_Window90d(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard?window=90d")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp dashboard.DashboardResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Window != "90d" {
+		t.Errorf("expected window=90d, got %q", resp.Window)
+	}
+}
