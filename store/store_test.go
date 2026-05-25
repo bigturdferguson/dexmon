@@ -299,3 +299,14 @@ func TestClearAlarmRearm_ClearsLastFiredAndSnooze(t *testing.T) {
 		t.Errorf("expected ReceiptID preserved, got %v", got.ReceiptID)
 	}
 }
+
+func TestGetAlarmState_ReturnsRearmedFalseByDefault(t *testing.T) {
+	s := newTestStore(t)
+	got, err := s.GetAlarmState("jessica", "Low", "brandon")
+	if err != nil {
+		t.Fatalf("GetAlarmState: %v", err)
+	}
+	if got.Rearmed {
+		t.Error("expected Rearmed=false for fresh state")
+	}
+}

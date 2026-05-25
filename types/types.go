@@ -33,4 +33,5 @@ type AlarmState struct {
 	SnoozedUntil     *time.Time
 	ReceiptID        *string
 	ReceiptExpiresAt *time.Time
+	Rearmed          bool
 }

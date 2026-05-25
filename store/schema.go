@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS alarm_state (
     snoozed_until      DATETIME,
     receipt_id         TEXT,
     receipt_expires_at DATETIME,
+    rearmed            INTEGER NOT NULL DEFAULT 0,
     UNIQUE (account, alarm_name, recipient)
 );
 CREATE INDEX IF NOT EXISTS idx_alarm_state_receipt_id ON alarm_state (receipt_id);
