@@ -81,6 +81,8 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
+      .stat-tir { grid-column: auto; }
+      .stat-tir .tir-bar-wrap { display: none; }
     }
     .stat-card {
       background: var(--surface);
@@ -325,7 +327,7 @@
           <div class="stat-value" id="val-cv">—</div>
           <div class="stat-sub" id="sub-cv">24h</div>
         </div>
-        <div class="stat-card stat-full">
+        <div class="stat-card stat-full stat-tir">
           <div class="stat-label">In Range</div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
             <div class="stat-value" id="val-tir">—</div>
