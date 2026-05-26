@@ -81,7 +81,7 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
-      .stat-tir { grid-column: auto; }
+      .stats-grid .stat-tir { grid-column: auto; }
       .stat-tir .tir-bar-wrap { display: none; }
     }
     .stat-card {
@@ -264,7 +264,7 @@
   <main>
     <div class="card">
       <div class="card-header">
-        <div class="card-title" id="chart-title">BG — Last 24 Hours</div>
+        <div class="card-title" id="chart-title">BG</div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <div class="window-pills">
             <button class="pill" data-window="12h" onclick="setWindow('12h')">12h</button>
@@ -547,9 +547,23 @@
       return h >= 22 || h < 6;
     }
 
+    // Map a raw-readings index to the nearest display-readings index for pixel positioning.
+    // rawReadings and displayReadings are both sorted by recorded_at ascending.
+    function rawIndexToDisplayIndex(rawReadings, displayReadings, rawIdx) {
+      const ts = new Date(rawReadings[rawIdx].recorded_at).getTime();
+      let best = 0, bestDiff = Infinity;
+      for (let j = 0; j < displayReadings.length; j++) {
+        const diff = Math.abs(new Date(displayReadings[j].recorded_at).getTime() - ts);
+        if (diff < bestDiff) { bestDiff = diff; best = j; }
+        else break; // sorted, so once diff grows we're past the minimum
+      }
+      return best;
+    }
+
     function drawNightBands(chart) {
       const { ctx, chartArea, scales } = chart;
-      const readings = chart._rulerReadings;
+      const rawReadings = chart._rawReadings || chart._rulerReadings;
+      const displayReadings = chart._rulerReadings;
       const xScale = scales.x;
       const color = document.documentElement.classList.contains('dark')
         ? 'rgba(255,255,255,0.04)'
@@ -559,22 +573,23 @@
       ctx.fillStyle = color;
 
       let inBand = false;
-      let bandStart = 0;
+      let bandStartDispIdx = 0;
 
-      for (let i = 0; i < readings.length; i++) {
-        const night = isNightHour(readings[i].recorded_at);
+      for (let i = 0; i < rawReadings.length; i++) {
+        const night = isNightHour(rawReadings[i].recorded_at);
         if (night && !inBand) {
           inBand = true;
-          bandStart = i;
+          bandStartDispIdx = rawIndexToDisplayIndex(rawReadings, displayReadings, i);
         } else if (!night && inBand) {
           inBand = false;
-          const x1 = xScale.getPixelForValue(bandStart);
-          const x2 = xScale.getPixelForValue(i);
+          const endDispIdx = rawIndexToDisplayIndex(rawReadings, displayReadings, i);
+          const x1 = xScale.getPixelForValue(bandStartDispIdx);
+          const x2 = xScale.getPixelForValue(endDispIdx);
           ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
         }
       }
       if (inBand) {
-        const x1 = xScale.getPixelForValue(bandStart);
+        const x1 = xScale.getPixelForValue(bandStartDispIdx);
         ctx.fillRect(x1, chartArea.top, chartArea.right - x1, chartArea.bottom - chartArea.top);
       }
 
@@ -583,14 +598,15 @@
 
     function drawBoundaryLines(chart, w) {
       const { ctx, chartArea, scales } = chart;
-      const readings = chart._rulerReadings;
+      const rawReadings = chart._rawReadings || chart._rulerReadings;
+      const displayReadings = chart._rulerReadings;
       const xScale = scales.x;
 
       ctx.save();
       ctx.strokeStyle = 'rgba(100,116,139,0.25)';
       ctx.lineWidth = 1;
 
-      readings.forEach((r, i) => {
+      rawReadings.forEach((r, i) => {
         const dt = new Date(r.recorded_at);
         let isBoundary = false;
         if (w === '30d') {
@@ -599,7 +615,8 @@
           isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1;
         }
         if (!isBoundary) return;
-        const x = xScale.getPixelForValue(i);
+        const dispIdx = rawIndexToDisplayIndex(rawReadings, displayReadings, i);
+        const x = xScale.getPixelForValue(dispIdx);
         ctx.beginPath();
         ctx.moveTo(x, chartArea.top);
         ctx.lineTo(x, chartArea.bottom);
@@ -744,6 +761,7 @@
       if (chart) {
         chart._rulerWindow   = currentWindow;
         chart._rulerReadings = displayReadings;
+        chart._rawReadings   = readings;
         chart.data.labels = labels;
         chart.data.datasets[0].data = values;
         chart.data.datasets[0].pointBackgroundColor = ptColors;
@@ -833,6 +851,7 @@
       });
       chart._rulerWindow   = currentWindow;
       chart._rulerReadings = displayReadings;
+      chart._rawReadings   = readings;
     }
 
     function renderAlarms(alarms) {
