@@ -289,14 +289,25 @@
     <div id="tab-stats" class="tab-panel">
       <div class="stats-grid">
         <div class="stat-card stat-current">
-          <div class="stat-label">Current BG</div>
-          <div class="stat-value-row">
-            <div class="stat-value" id="val-current">—</div>
-            <span class="stat-delta" id="val-delta"></span>
+          <div class="stat-label" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+            <span>Current BG</span>
+            <span class="stat-label-age" id="val-current-age"></span>
           </div>
-          <div class="stat-sub">
-            <span class="trend" id="val-trend"></span>
-            <span id="val-current-age"></span>
+          <div class="quartile-row">
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-current">—</div>
+              <span class="stat-sub-inline">mg/dL</span>
+            </div>
+            <div class="quartile-divider">|</div>
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-delta"></div>
+              <span class="stat-sub-inline">change</span>
+            </div>
+            <div class="quartile-divider">|</div>
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-trend"></div>
+              <span class="stat-sub-inline">trend</span>
+            </div>
           </div>
         </div>
         <div class="stat-card stat-mobile-hide">
