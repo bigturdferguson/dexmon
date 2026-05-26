@@ -251,6 +251,7 @@
     .quartile-row { display: flex; justify-content: space-around; margin-top: 0.4rem; align-items: center; }
     .quartile-cell { text-align: center; }
     .quartile-cell .stat-value { font-size: 1.375rem; }
+    .stat-current .stat-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
     .stat-current .quartile-cell { display: flex; align-items: baseline; gap: 0.25rem; }
     .quartile-divider { color: var(--border); font-size: 1.5rem; line-height: 1; }
   </style>
@@ -289,7 +290,7 @@
     <div id="tab-stats" class="tab-panel">
       <div class="stats-grid">
         <div class="stat-card stat-current">
-          <div class="stat-label" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+          <div class="stat-label">
             <span>Current BG</span>
             <span class="stat-label-age" id="val-current-age"></span>
           </div>
