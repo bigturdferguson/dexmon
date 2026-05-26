@@ -80,6 +80,9 @@
     @media (max-width: 640px) {
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
+      .stat-mobile-hide { display: none; }
+      .stats-grid .stat-tir { grid-column: auto; }
+      .stat-tir .tir-bar-wrap { display: none; }
     }
     .stat-card {
       background: var(--surface);
@@ -112,6 +115,16 @@
       gap: 0.25rem;
     }
     .trend { font-size: 1.2rem; }
+    .stat-delta {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-left: 0.4rem;
+    }
+    .stat-value-row {
+      display: flex;
+      align-items: baseline;
+    }
     /* BG color classes */
     .bg-low    { color: var(--low); }
     .bg-high   { color: var(--high); }
@@ -152,6 +165,11 @@
       margin-bottom: 1rem;
     }
     .card-header .card-title { margin-bottom: 0; }
+    @media (max-width: 640px) {
+      .card-header { flex-direction: column; align-items: flex-start; }
+      .card-header > div { width: 100%; }
+      .card-header .card-title { margin-bottom: 0.5rem; }
+    }
     .window-pills { display: flex; gap: 0.25rem; }
     .pill {
       background: none;
@@ -246,7 +264,7 @@
   <main>
     <div class="card">
       <div class="card-header">
-        <div class="card-title" id="chart-title">BG — Last 24 Hours</div>
+        <div class="card-title" id="chart-title">BG</div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <div class="window-pills">
             <button class="pill" data-window="12h" onclick="setWindow('12h')">12h</button>
@@ -270,23 +288,26 @@
       <div class="stats-grid">
         <div class="stat-card stat-current">
           <div class="stat-label">Current BG</div>
-          <div class="stat-value" id="val-current">—</div>
+          <div class="stat-value-row">
+            <div class="stat-value" id="val-current">—</div>
+            <span class="stat-delta" id="val-delta"></span>
+          </div>
           <div class="stat-sub">
             <span class="trend" id="val-trend"></span>
             <span id="val-current-age"></span>
           </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-mobile-hide">
           <div class="stat-label">Previous</div>
           <div class="stat-value" id="val-prev">—</div>
           <div class="stat-sub" id="val-prev-age"></div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-mobile-hide">
           <div class="stat-label">High</div>
           <div class="stat-value" id="val-high">—</div>
           <div class="stat-sub" id="sub-high">24h</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-mobile-hide">
           <div class="stat-label">Low</div>
           <div class="stat-value" id="val-low">—</div>
           <div class="stat-sub" id="sub-low">24h</div>
@@ -306,7 +327,7 @@
           <div class="stat-value" id="val-cv">—</div>
           <div class="stat-sub" id="sub-cv">24h</div>
         </div>
-        <div class="stat-card stat-full">
+        <div class="stat-card stat-full stat-tir">
           <div class="stat-label">In Range</div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
             <div class="stat-value" id="val-tir">—</div>
@@ -423,14 +444,7 @@
     }
 
     function chartTitle(w) {
-      const map = {
-        '12h': 'BG — Last 12 Hours',
-        '24h': 'BG — Last 24 Hours',
-        '7d':  'BG — Last 7 Days',
-        '30d': 'BG — Last 30 Days',
-        '90d': 'BG — Last 90 Days',
-      };
-      return map[w] || 'BG — Last 24 Hours';
+      return 'BG';
     }
 
     function updateWindowLabels(w) {
@@ -533,9 +547,23 @@
       return h >= 22 || h < 6;
     }
 
+    // Map a raw-readings index to the nearest display-readings index for pixel positioning.
+    // rawReadings and displayReadings are both sorted by recorded_at ascending.
+    function rawIndexToDisplayIndex(rawReadings, displayReadings, rawIdx) {
+      const ts = new Date(rawReadings[rawIdx].recorded_at).getTime();
+      let best = 0, bestDiff = Infinity;
+      for (let j = 0; j < displayReadings.length; j++) {
+        const diff = Math.abs(new Date(displayReadings[j].recorded_at).getTime() - ts);
+        if (diff < bestDiff) { bestDiff = diff; best = j; }
+        else break; // sorted, so once diff grows we're past the minimum
+      }
+      return best;
+    }
+
     function drawNightBands(chart) {
       const { ctx, chartArea, scales } = chart;
-      const readings = chart._rulerReadings;
+      const rawReadings = chart._rawReadings || chart._rulerReadings;
+      const displayReadings = chart._rulerReadings;
       const xScale = scales.x;
       const color = document.documentElement.classList.contains('dark')
         ? 'rgba(255,255,255,0.04)'
@@ -545,22 +573,23 @@
       ctx.fillStyle = color;
 
       let inBand = false;
-      let bandStart = 0;
+      let bandStartDispIdx = 0;
 
-      for (let i = 0; i < readings.length; i++) {
-        const night = isNightHour(readings[i].recorded_at);
+      for (let i = 0; i < rawReadings.length; i++) {
+        const night = isNightHour(rawReadings[i].recorded_at);
         if (night && !inBand) {
           inBand = true;
-          bandStart = i;
+          bandStartDispIdx = rawIndexToDisplayIndex(rawReadings, displayReadings, i);
         } else if (!night && inBand) {
           inBand = false;
-          const x1 = xScale.getPixelForValue(bandStart);
-          const x2 = xScale.getPixelForValue(i);
+          const endDispIdx = rawIndexToDisplayIndex(rawReadings, displayReadings, i);
+          const x1 = xScale.getPixelForValue(bandStartDispIdx);
+          const x2 = xScale.getPixelForValue(endDispIdx);
           ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
         }
       }
       if (inBand) {
-        const x1 = xScale.getPixelForValue(bandStart);
+        const x1 = xScale.getPixelForValue(bandStartDispIdx);
         ctx.fillRect(x1, chartArea.top, chartArea.right - x1, chartArea.bottom - chartArea.top);
       }
 
@@ -569,14 +598,15 @@
 
     function drawBoundaryLines(chart, w) {
       const { ctx, chartArea, scales } = chart;
-      const readings = chart._rulerReadings;
+      const rawReadings = chart._rawReadings || chart._rulerReadings;
+      const displayReadings = chart._rulerReadings;
       const xScale = scales.x;
 
       ctx.save();
       ctx.strokeStyle = 'rgba(100,116,139,0.25)';
       ctx.lineWidth = 1;
 
-      readings.forEach((r, i) => {
+      rawReadings.forEach((r, i) => {
         const dt = new Date(r.recorded_at);
         let isBoundary = false;
         if (w === '30d') {
@@ -585,7 +615,8 @@
           isBoundary = dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1;
         }
         if (!isBoundary) return;
-        const x = xScale.getPixelForValue(i);
+        const dispIdx = rawIndexToDisplayIndex(rawReadings, displayReadings, i);
+        const x = xScale.getPixelForValue(dispIdx);
         ctx.beginPath();
         ctx.moveTo(x, chartArea.top);
         ctx.lineTo(x, chartArea.bottom);
@@ -617,6 +648,16 @@
       curEl.className = 'stat-value' + (cur ? ' ' + bgClass(cur.value) : '');
       document.getElementById('val-trend').textContent = cur ? (TREND_ARROW[cur.trend] || '') : '';
       document.getElementById('val-current-age').textContent = cur ? timeAgo(cur.recorded_at) : '';
+
+      const deltaEl = document.getElementById('val-delta');
+      if (deltaEl) {
+        if (cur && prev) {
+          const delta = cur.value - prev.value;
+          deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
+        } else {
+          deltaEl.textContent = '';
+        }
+      }
 
       const prevEl = document.getElementById('val-prev');
       prevEl.textContent = prev ? prev.value : '—';
@@ -661,20 +702,71 @@
       document.getElementById('val-q3').textContent     = d.stats?.q3      || '—';
     }
 
+    function lttb(data, threshold) {
+      const len = data.length;
+      if (threshold >= len || threshold <= 2) return data;
+
+      const sampled = [data[0]];
+      let a = 0;
+
+      for (let i = 0; i < threshold - 2; i++) {
+        const nextRangeStart = Math.floor((i + 1) * (len - 2) / (threshold - 2)) + 1;
+        const nextRangeEnd   = Math.min(Math.floor((i + 2) * (len - 2) / (threshold - 2)) + 1, len);
+        let avgX = 0, avgY = 0;
+        const nextLen = nextRangeEnd - nextRangeStart;
+        for (let j = nextRangeStart; j < nextRangeEnd; j++) {
+          avgX += j;
+          avgY += data[j].value;
+        }
+        if (nextLen > 0) {
+          avgX /= nextLen;
+          avgY /= nextLen;
+        }
+
+        const bucketStart = Math.floor(i * (len - 2) / (threshold - 2)) + 1;
+        const bucketEnd   = Math.floor((i + 1) * (len - 2) / (threshold - 2)) + 1;
+        const ax = a, ay = data[a].value;
+
+        let maxArea = -1, maxIdx = bucketStart;
+        for (let j = bucketStart; j < bucketEnd; j++) {
+          const area = Math.abs((ax - avgX) * (data[j].value - ay) - (ax - j) * (avgY - ay)) * 0.5;
+          if (area > maxArea) { maxArea = area; maxIdx = j; }
+        }
+
+        sampled.push(data[maxIdx]);
+        a = maxIdx;
+      }
+
+      sampled.push(data[len - 1]);
+      return sampled;
+    }
+
+    function prepareChartData(readings, w) {
+      if (w === '12h' || readings.length <= 200) return readings;
+      return lttb(readings, 200);
+    }
+
     function renderChart(readings) {
       if (!readings.length) return;
-      const labels = readings.map(r => chartLabel(r.recorded_at, currentWindow));
-      const values    = readings.map(r => r.value);
-      const ptColors  = readings.map(r => bgColor(r.value));
-      const lowLine   = Array(readings.length).fill(lastData.target.low);
-      const highLine  = Array(readings.length).fill(lastData.target.high);
+      const displayReadings = prepareChartData(readings, currentWindow);
+      const showDots = currentWindow === '12h' || currentWindow === '24h';
+      const pointRadius = showDots ? (displayReadings.length > 100 ? 2 : 3) : 0;
+
+      const labels    = displayReadings.map(r => chartLabel(r.recorded_at, currentWindow));
+      const values    = displayReadings.map(r => r.value);
+      const ptColors  = displayReadings.map(r => bgColor(r.value));
+      const lowLine   = Array(displayReadings.length).fill(lastData.target.low);
+      const highLine  = Array(displayReadings.length).fill(lastData.target.high);
 
       if (chart) {
         chart._rulerWindow   = currentWindow;
-        chart._rulerReadings = readings;
+        chart._rulerReadings = displayReadings;
+        chart._rawReadings   = readings;
         chart.data.labels = labels;
         chart.data.datasets[0].data = values;
         chart.data.datasets[0].pointBackgroundColor = ptColors;
+        chart.data.datasets[0].pointRadius = pointRadius;
+        chart.data.datasets[0].pointHoverRadius = 4;
         chart.data.datasets[1].data = lowLine;
         chart.data.datasets[2].data = highLine;
         chart.update('none');
@@ -693,7 +785,8 @@
               borderColor: '#6366f1',
               borderWidth: 2,
               pointBackgroundColor: ptColors,
-              pointRadius: readings.length > 60 ? 2 : 3,
+              pointRadius,
+              pointHoverRadius: 4,
               tension: 0.3,
               fill: false,
             },
@@ -725,7 +818,7 @@
               filter: item => item.datasetIndex === 0,
               callbacks: {
                 title: ctx => {
-                  const r = lastData?.readings?.[ctx[0]?.dataIndex];
+                  const r = chart._rulerReadings?.[ctx[0]?.dataIndex];
                   if (!r) return '';
                   return new Date(r.recorded_at).toLocaleString([], {
                     month: 'short', day: 'numeric',
@@ -757,7 +850,8 @@
         },
       });
       chart._rulerWindow   = currentWindow;
-      chart._rulerReadings = readings;
+      chart._rulerReadings = displayReadings;
+      chart._rawReadings   = readings;
     }
 
     function renderAlarms(alarms) {
