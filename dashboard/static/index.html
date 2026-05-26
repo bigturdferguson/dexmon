@@ -685,20 +685,70 @@
       document.getElementById('val-q3').textContent     = d.stats?.q3      || '—';
     }
 
+    function lttb(data, threshold) {
+      const len = data.length;
+      if (threshold >= len || threshold <= 2) return data;
+
+      const sampled = [data[0]];
+      let a = 0;
+
+      for (let i = 0; i < threshold - 2; i++) {
+        const nextRangeStart = Math.floor((i + 1) * (len - 2) / (threshold - 2)) + 1;
+        const nextRangeEnd   = Math.min(Math.floor((i + 2) * (len - 2) / (threshold - 2)) + 1, len);
+        let avgX = 0, avgY = 0;
+        const nextLen = nextRangeEnd - nextRangeStart;
+        for (let j = nextRangeStart; j < nextRangeEnd; j++) {
+          avgX += j;
+          avgY += data[j].value;
+        }
+        if (nextLen > 0) {
+          avgX /= nextLen;
+          avgY /= nextLen;
+        }
+
+        const bucketStart = Math.floor(i * (len - 2) / (threshold - 2)) + 1;
+        const bucketEnd   = Math.floor((i + 1) * (len - 2) / (threshold - 2)) + 1;
+        const ax = a, ay = data[a].value;
+
+        let maxArea = -1, maxIdx = bucketStart;
+        for (let j = bucketStart; j < bucketEnd; j++) {
+          const area = Math.abs((ax - avgX) * (data[j].value - ay) - (ax - j) * (avgY - ay)) * 0.5;
+          if (area > maxArea) { maxArea = area; maxIdx = j; }
+        }
+
+        sampled.push(data[maxIdx]);
+        a = maxIdx;
+      }
+
+      sampled.push(data[len - 1]);
+      return sampled;
+    }
+
+    function prepareChartData(readings, w) {
+      if (w === '12h' || readings.length <= 200) return readings;
+      return lttb(readings, 200);
+    }
+
     function renderChart(readings) {
       if (!readings.length) return;
-      const labels = readings.map(r => chartLabel(r.recorded_at, currentWindow));
-      const values    = readings.map(r => r.value);
-      const ptColors  = readings.map(r => bgColor(r.value));
-      const lowLine   = Array(readings.length).fill(lastData.target.low);
-      const highLine  = Array(readings.length).fill(lastData.target.high);
+      const displayReadings = prepareChartData(readings, currentWindow);
+      const showDots = currentWindow === '12h' || currentWindow === '24h';
+      const pointRadius = showDots ? (displayReadings.length > 100 ? 2 : 3) : 0;
+
+      const labels    = displayReadings.map(r => chartLabel(r.recorded_at, currentWindow));
+      const values    = displayReadings.map(r => r.value);
+      const ptColors  = displayReadings.map(r => bgColor(r.value));
+      const lowLine   = Array(displayReadings.length).fill(lastData.target.low);
+      const highLine  = Array(displayReadings.length).fill(lastData.target.high);
 
       if (chart) {
         chart._rulerWindow   = currentWindow;
-        chart._rulerReadings = readings;
+        chart._rulerReadings = displayReadings;
         chart.data.labels = labels;
         chart.data.datasets[0].data = values;
         chart.data.datasets[0].pointBackgroundColor = ptColors;
+        chart.data.datasets[0].pointRadius = pointRadius;
+        chart.data.datasets[0].pointHoverRadius = 4;
         chart.data.datasets[1].data = lowLine;
         chart.data.datasets[2].data = highLine;
         chart.update('none');
@@ -717,7 +767,8 @@
               borderColor: '#6366f1',
               borderWidth: 2,
               pointBackgroundColor: ptColors,
-              pointRadius: readings.length > 60 ? 2 : 3,
+              pointRadius,
+              pointHoverRadius: 4,
               tension: 0.3,
               fill: false,
             },
@@ -749,7 +800,7 @@
               filter: item => item.datasetIndex === 0,
               callbacks: {
                 title: ctx => {
-                  const r = lastData?.readings?.[ctx[0]?.dataIndex];
+                  const r = chart._rulerReadings?.[ctx[0]?.dataIndex];
                   if (!r) return '';
                   return new Date(r.recorded_at).toLocaleString([], {
                     month: 'short', day: 'numeric',
@@ -781,7 +832,7 @@
         },
       });
       chart._rulerWindow   = currentWindow;
-      chart._rulerReadings = readings;
+      chart._rulerReadings = displayReadings;
     }
 
     function renderAlarms(alarms) {
