@@ -80,6 +80,7 @@
     @media (max-width: 640px) {
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
+      .stat-mobile-hide { display: none; }
     }
     .stat-card {
       background: var(--surface);
@@ -112,6 +113,16 @@
       gap: 0.25rem;
     }
     .trend { font-size: 1.2rem; }
+    .stat-delta {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-left: 0.4rem;
+    }
+    .stat-value-row {
+      display: flex;
+      align-items: baseline;
+    }
     /* BG color classes */
     .bg-low    { color: var(--low); }
     .bg-high   { color: var(--high); }
@@ -275,23 +286,26 @@
       <div class="stats-grid">
         <div class="stat-card stat-current">
           <div class="stat-label">Current BG</div>
-          <div class="stat-value" id="val-current">—</div>
+          <div class="stat-value-row">
+            <div class="stat-value" id="val-current">—</div>
+            <span class="stat-delta" id="val-delta"></span>
+          </div>
           <div class="stat-sub">
             <span class="trend" id="val-trend"></span>
             <span id="val-current-age"></span>
           </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-mobile-hide">
           <div class="stat-label">Previous</div>
           <div class="stat-value" id="val-prev">—</div>
           <div class="stat-sub" id="val-prev-age"></div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-mobile-hide">
           <div class="stat-label">High</div>
           <div class="stat-value" id="val-high">—</div>
           <div class="stat-sub" id="sub-high">24h</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-mobile-hide">
           <div class="stat-label">Low</div>
           <div class="stat-value" id="val-low">—</div>
           <div class="stat-sub" id="sub-low">24h</div>
@@ -615,6 +629,16 @@
       curEl.className = 'stat-value' + (cur ? ' ' + bgClass(cur.value) : '');
       document.getElementById('val-trend').textContent = cur ? (TREND_ARROW[cur.trend] || '') : '';
       document.getElementById('val-current-age').textContent = cur ? timeAgo(cur.recorded_at) : '';
+
+      const deltaEl = document.getElementById('val-delta');
+      if (deltaEl) {
+        if (cur && prev) {
+          const delta = cur.value - prev.value;
+          deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
+        } else {
+          deltaEl.textContent = '';
+        }
+      }
 
       const prevEl = document.getElementById('val-prev');
       prevEl.textContent = prev ? prev.value : '—';
