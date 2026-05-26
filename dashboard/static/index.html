@@ -114,16 +114,17 @@
       align-items: center;
       gap: 0.25rem;
     }
-    .trend { font-size: 1.2rem; }
-    .stat-delta {
-      font-size: 1rem;
-      font-weight: 600;
+    .stat-sub-inline {
+      font-size: 0.6875rem;
       color: var(--text-muted);
-      margin-left: 0.4rem;
+      font-weight: 400;
     }
-    .stat-value-row {
-      display: flex;
-      align-items: baseline;
+    .stat-label-age {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
     }
     /* BG color classes */
     .bg-low    { color: var(--low); }
@@ -250,6 +251,9 @@
     .quartile-row { display: flex; justify-content: space-around; margin-top: 0.4rem; align-items: center; }
     .quartile-cell { text-align: center; }
     .quartile-cell .stat-value { font-size: 1.375rem; }
+    .stat-current .stat-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+    .stat-current .quartile-cell { display: flex; align-items: baseline; gap: 0.25rem; }
+    .stat-current .quartile-cell:first-child .stat-value { font-size: 2.25rem; }
     .quartile-divider { color: var(--border); font-size: 1.5rem; line-height: 1; }
   </style>
 </head>
@@ -287,14 +291,25 @@
     <div id="tab-stats" class="tab-panel">
       <div class="stats-grid">
         <div class="stat-card stat-current">
-          <div class="stat-label">Current BG</div>
-          <div class="stat-value-row">
-            <div class="stat-value" id="val-current">—</div>
-            <span class="stat-delta" id="val-delta"></span>
+          <div class="stat-label">
+            <span>Current BG</span>
+            <span class="stat-label-age" id="val-current-age"></span>
           </div>
-          <div class="stat-sub">
-            <span class="trend" id="val-trend"></span>
-            <span id="val-current-age"></span>
+          <div class="quartile-row">
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-current">—</div>
+              <span class="stat-sub-inline">mg/dL</span>
+            </div>
+            <div class="quartile-divider">|</div>
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-delta"></div>
+              <span class="stat-sub-inline">change</span>
+            </div>
+            <div class="quartile-divider">|</div>
+            <div class="quartile-cell">
+              <div class="stat-value" id="val-trend"></div>
+              <span class="stat-sub-inline">trend</span>
+            </div>
           </div>
         </div>
         <div class="stat-card stat-mobile-hide">
