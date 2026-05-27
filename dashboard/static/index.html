@@ -83,6 +83,114 @@
       .stat-mobile-hide { display: none; }
       .stats-grid .stat-tir { grid-column: auto; }
       .stat-tir .tir-bar-wrap { display: none; }
+      .stat-current .stat-label-age { display: none; }
+      /* Current BG: two-row grid — values row 1, labels row 2 */
+      .stat-current .quartile-row {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr auto 1fr;
+        grid-template-rows: auto auto;
+        margin-top: 0.25rem;
+      }
+      .stat-card.stat-current .quartile-cell {
+        display: contents;
+      }
+      /* Column 1 — BG value + label */
+      .stat-current .quartile-cell:nth-child(1) .stat-value {
+        grid-column: 1; grid-row: 1;
+        justify-self: center;
+        align-self: center;
+      }
+      .stat-current .quartile-cell:nth-child(1) .stat-sub-inline {
+        grid-column: 1; grid-row: 2;
+        text-align: center;
+      }
+      /* Column 2 — first divider */
+      .stat-current .quartile-divider:nth-child(2) {
+        grid-column: 2; grid-row: 1 / 3;
+        align-self: center;
+        padding: 0 0.25rem;
+      }
+      /* Column 3 — delta value + label */
+      .stat-current .quartile-cell:nth-child(3) .stat-value {
+        grid-column: 3; grid-row: 1;
+        justify-self: center;
+        align-self: center;
+      }
+      .stat-current .quartile-cell:nth-child(3) .stat-sub-inline {
+        grid-column: 3; grid-row: 2;
+        text-align: center;
+      }
+      /* Column 4 — second divider */
+      .stat-current .quartile-divider:nth-child(4) {
+        grid-column: 4; grid-row: 1 / 3;
+        align-self: center;
+        padding: 0 0.25rem;
+      }
+      /* Column 5 — trend value + label */
+      .stat-current .quartile-cell:nth-child(5) .stat-value {
+        grid-column: 5; grid-row: 1;
+        justify-self: center;
+        align-self: center;
+      }
+      .stat-current .quartile-cell:nth-child(5) .stat-sub-inline {
+        grid-column: 5; grid-row: 2;
+        text-align: center;
+      }
+      #val-delta { font-size: 1.75rem; }
+      #val-trend { font-size: 2.75rem; }
+      /* Avg, Std Dev, CV: label + period on same line, value below */
+      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+          "label sub"
+          "value value";
+        column-gap: 0.3em;
+      }
+      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-label {
+        grid-area: label;
+        margin-bottom: 0;
+        align-self: baseline;
+      }
+      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-sub {
+        grid-area: sub;
+        margin-top: 0;
+        display: block;
+        align-self: baseline;
+      }
+      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-value {
+        grid-area: value;
+        margin-top: 0.35rem;
+      }
+      /* In Range: same label+period inline treatment */
+      .stat-tir {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+          "label sub"
+          "value value";
+        column-gap: 0.3em;
+      }
+      .stat-tir .stat-label {
+        grid-area: label;
+        margin-bottom: 0;
+        align-self: baseline;
+      }
+      .stat-tir .stat-sub {
+        grid-area: sub;
+        margin-top: 0;
+        display: block;
+        align-self: baseline;
+      }
+      .stat-tir .tir-val-row {
+        grid-area: value;
+        margin-top: 0.35rem;
+      }
+      .stat-full .quartile-cell .stat-sub {
+        justify-content: center;
+      }
     }
     .stat-card {
       background: var(--surface);
@@ -344,7 +452,7 @@
         </div>
         <div class="stat-card stat-full stat-tir">
           <div class="stat-label">In Range</div>
-          <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div class="tir-val-row" style="display:flex;align-items:center;gap:0.75rem;">
             <div class="stat-value" id="val-tir">—</div>
             <div class="tir-bar-wrap"><div class="tir-bar" id="tir-bar"></div></div>
           </div>
