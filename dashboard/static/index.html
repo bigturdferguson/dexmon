@@ -139,7 +139,7 @@
       #val-delta { font-size: 1.75rem; }
       #val-trend { font-size: 2.75rem; }
       /* Avg, Std Dev, CV: label + period on same line, value below */
-      .stat-card:not(.stat-current):not(.stat-full) {
+      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) {
         display: grid;
         grid-template-columns: auto 1fr;
         grid-template-rows: auto auto;
@@ -148,18 +148,18 @@
           "value value";
         column-gap: 0.3em;
       }
-      .stat-card:not(.stat-current):not(.stat-full) .stat-label {
+      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-label {
         grid-area: label;
         margin-bottom: 0;
         align-self: baseline;
       }
-      .stat-card:not(.stat-current):not(.stat-full) .stat-sub {
+      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-sub {
         grid-area: sub;
         margin-top: 0;
         display: block;
         align-self: baseline;
       }
-      .stat-card:not(.stat-current):not(.stat-full) .stat-value {
+      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-value {
         grid-area: value;
         margin-top: 0.35rem;
       }
