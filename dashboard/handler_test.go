@@ -487,3 +487,52 @@ func TestDashboardAPI_Window90d(t *testing.T) {
 		t.Errorf("expected window=90d, got %q", resp.Window)
 	}
 }
+
+func TestDashboardAPI_TimeBelowAboveRange(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	// 1 below (50), 2 in range (100, 140), 1 above (220) → TBR=25%, TAR=25%
+	readings := []types.Reading{
+		{Account: "noah", Value: 50,  Trend: types.TrendFlat, RecordedAt: now.Add(-4 * time.Hour)},
+		{Account: "noah", Value: 100, Trend: types.TrendFlat, RecordedAt: now.Add(-3 * time.Hour)},
+		{Account: "noah", Value: 140, Trend: types.TrendFlat, RecordedAt: now.Add(-2 * time.Hour)},
+		{Account: "noah", Value: 220, Trend: types.TrendFlat, RecordedAt: now.Add(-1 * time.Hour)},
+	}
+	for _, r := range readings {
+		if err := s.InsertReading(r); err != nil {
+			t.Fatalf("InsertReading: %v", err)
+		}
+	}
+
+	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	w := get(t, h, "/api/dashboard")
+
+	body := w.Body.Bytes()
+
+	// Verify struct values
+	var resp dashboard.DashboardResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Stats.TimeBelowRange != 25.0 {
+		t.Errorf("TimeBelowRange: got %v want 25.0", resp.Stats.TimeBelowRange)
+	}
+	if resp.Stats.TimeAboveRange != 25.0 {
+		t.Errorf("TimeAboveRange: got %v want 25.0", resp.Stats.TimeAboveRange)
+	}
+
+	// Verify JSON keys are present (catches json tag typos)
+	var raw map[string]interface{}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		t.Fatalf("unmarshal raw: %v", err)
+	}
+	stats, _ := raw["stats"].(map[string]interface{})
+	if _, ok := stats["time_below_range"]; !ok {
+		t.Error("JSON missing key: time_below_range")
+	}
+	if _, ok := stats["time_above_range"]; !ok {
+		t.Error("JSON missing key: time_above_range")
+	}
+	t.Logf("time_below_range=%v time_above_range=%v", stats["time_below_range"], stats["time_above_range"])
+}
