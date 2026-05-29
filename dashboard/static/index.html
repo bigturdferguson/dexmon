@@ -1942,7 +1942,7 @@
         });
         return `<tr>
           <td>${esc(e.alarm_name)}</td>
-          <td>${esc(e.bg_value)}</td>
+          <td class="${bgClass(e.bg_value)}">${esc(e.bg_value)}</td>
           <td>${t}</td>
         </tr>`;
       }).join('');
