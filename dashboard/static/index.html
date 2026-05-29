@@ -234,7 +234,8 @@
       .stat-tir .stat-sub,
       .stat-tir .tir-bar-wrap { display: none; }
       /* Tab bar: fixed at bottom, extends into safe area */
-      .tab-bar {
+      /* body prefix lifts specificity above desktop .tab-bar rule that follows media query */
+      body .tab-bar {
         position: fixed;
         bottom: 0;
         left: 0;
@@ -244,6 +245,8 @@
         border: none;
         border-top: 1px solid var(--border);
         margin-bottom: 0;
+        overflow: visible;
+        box-shadow: none;
         padding-bottom: env(safe-area-inset-bottom, 0px);
       }
       /* Clear fixed tab bar + safe area */
