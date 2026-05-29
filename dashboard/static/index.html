@@ -140,11 +140,11 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
-      #stat-avg    { grid-column: 1; grid-row: 1; }
-      .stat-tir    { grid-column: 2; grid-row: 1; }
-      #stat-stddev { grid-column: 1; grid-row: 2; }
-      #stat-cv     { grid-column: 2; grid-row: 2; }
-      .stat-tir .stat-value { font-size: 1.1rem; font-weight: 700; }
+      /* Explicit placement — .stats-grid prefix beats global .stat-full { grid-column: 1/-1 } */
+      .stats-grid #stat-avg    { grid-column: 1; grid-row: 1; }
+      .stats-grid .stat-tir    { grid-column: 2; grid-row: 1; }
+      .stats-grid #stat-stddev { grid-column: 1; grid-row: 2; }
+      .stats-grid #stat-cv     { grid-column: 2; grid-row: 2; }
       .stat-current .stat-label-age { display: none; }
       /* Current BG: two-row grid — values row 1, labels row 2 */
       .stat-current .quartile-row {
@@ -200,14 +200,17 @@
       }
       #val-delta { font-size: 1.75rem; }
       #val-trend { font-size: 1.75rem; }
-      /* Avg, Std Dev, CV: full-width flex row — label left, value right */
-      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) {
+      /* All 4 stat cards: uniform flex row — label left, value right */
+      #stat-avg, #stat-stddev, #stat-cv, .stat-tir {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 0.5rem 0.875rem;
       }
-      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-label {
+      #stat-avg .stat-label,
+      #stat-stddev .stat-label,
+      #stat-cv .stat-label,
+      .stat-tir .stat-label {
         font-size: 0.6875rem;
         font-weight: 700;
         text-transform: uppercase;
@@ -215,25 +218,18 @@
         color: var(--text-muted);
         margin-bottom: 0;
       }
-      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-sub {
-        display: none;
-      }
-      .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-value {
+      #stat-avg .stat-value,
+      #stat-stddev .stat-value,
+      #stat-cv .stat-value,
+      .stat-tir .stat-value {
         font-size: 1.1rem;
         font-weight: 700;
       }
-      /* In Range: full-width flex row — label left, value right, no bar */
-      .stat-tir {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0.5rem 0.875rem;
-      }
-      .stat-tir .stat-label {
-        margin-bottom: 0; font-size: 0.6875rem; font-weight: 700;
-        text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
-      }
-      .stat-tir .tir-val-row { font-size: 1.1rem; font-weight: 700; }
+      #stat-avg .stat-sub,
+      #stat-stddev .stat-sub,
+      #stat-cv .stat-sub,
+      .stat-tir .stat-sub,
       .stat-tir .tir-bar-wrap { display: none; }
-      .stat-tir .stat-sub { display: none; }
     }
     .stat-card {
       background: var(--surface);
