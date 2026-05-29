@@ -645,29 +645,97 @@
       }
     });
 
-    function chartLabel(isoStr, w) {
-      const dt = new Date(isoStr);
-      if (w === '12h' || w === '24h') {
-        return dt.getMinutes() === 0
-          ? dt.getHours().toString().padStart(2, '0') + ':00'
-          : '';
-      }
+    // Minimum gap (ms) from start/end before an intermediate tick is shown.
+    // Set to half the tick interval so ticks never crowd the endpoint labels.
+    const LABEL_GAP_MS = {
+      '1h':  7.5 * 60 * 1000,
+      '3h':  15  * 60 * 1000,
+      '6h':  30  * 60 * 1000,
+      '12h': 60  * 60 * 1000,
+      '24h': 2   * 60 * 60 * 1000,
+      '7d':  24  * 60 * 60 * 1000,
+      '30d': 4   * 24 * 60 * 60 * 1000,
+      '90d': 16  * 24 * 60 * 60 * 1000,
+    };
+    const LONG_WINDOWS = new Set(['7d', '30d', '90d']);
+
+    function fmtT(d) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    function fmtD(d) {
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+    function fmtM(d) {
+      return d.toLocaleDateString([], { month: 'short' });
+    }
+
+    // Generate explicit tick timestamps for long windows.
+    function longTickMs(w, startMs, endMs) {
+      const ticks = [];
+      const d = new Date(startMs);
       if (w === '7d') {
-        return (dt.getHours() === 0 && dt.getMinutes() === 0)
-          ? dt.toLocaleDateString([], { weekday: 'short' })
-          : '';
+        d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 1);
+        while (d.getTime() <= endMs) { ticks.push(d.getTime()); d.setDate(d.getDate() + 1); }
+      } else if (w === '30d') {
+        d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 1);
+        while (d.getTime() <= endMs) { ticks.push(d.getTime()); d.setDate(d.getDate() + 7); }
+      } else if (w === '90d') {
+        d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() + 1);
+        while (d.getTime() <= endMs) { ticks.push(d.getTime()); d.setMonth(d.getMonth() + 1); }
       }
-      if (w === '30d') {
-        return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() % 5 === 1)
-          ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' })
-          : '';
+      return ticks;
+    }
+
+    // Find the index of the reading in rds whose timestamp is closest to targetMs.
+    function nearestReadingIdx(rds, targetMs) {
+      let best = 0, bestDiff = Infinity;
+      for (let i = 0; i < rds.length; i++) {
+        const diff = Math.abs(new Date(rds[i].recorded_at).getTime() - targetMs);
+        if (diff < bestDiff) { bestDiff = diff; best = i; }
+        else if (diff > bestDiff) break;
       }
-      if (w === '90d') {
-        return (dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 1)
-          ? dt.toLocaleDateString([], { month: 'short' })
-          : '';
+      return best;
+    }
+
+    function buildLabels(displayReadings, w) {
+      const n = displayReadings.length;
+      const startMs = new Date(displayReadings[0].recorded_at).getTime();
+      const endMs   = new Date(displayReadings[n - 1].recorded_at).getTime();
+      const gap     = LABEL_GAP_MS[w] || 0;
+
+      // ── Short windows: iterate points, apply suppression ─────────────────
+      if (!LONG_WINDOWS.has(w)) {
+        return displayReadings.map((r, i) => {
+          const dt  = new Date(r.recorded_at);
+          const ts  = dt.getTime();
+          const min = dt.getMinutes();
+          const h   = dt.getHours();
+          if (i === 0 || i === n - 1) return fmtT(dt);
+          if (ts - startMs < gap || endMs - ts < gap) return '';
+          if (w === '1h')  return min % 15 === 0 ? fmtT(dt) : '';
+          if (w === '3h')  return (min === 0 || min === 30) ? fmtT(dt) : '';
+          if (w === '6h')  return min === 0 ? fmtT(dt) : '';
+          if (w === '12h') return (min === 0 && h % 2 === 0) ? fmtT(dt) : '';
+          if (w === '24h') return (min === 0 && h % 4 === 0) ? fmtT(dt) : '';
+          return '';
+        });
       }
-      return '';
+
+      // ── Long windows: snap explicit tick timestamps to nearest point ──────
+      const labels  = new Array(n).fill('');
+      const fmt     = w === '90d' ? fmtM : fmtD;
+      labels[0]     = fmt(new Date(startMs));
+      labels[n - 1] = fmt(new Date(endMs));
+
+      const used = new Set([0, n - 1]);
+      for (const tickMs of longTickMs(w, startMs, endMs)) {
+        if (tickMs - startMs < gap || endMs - tickMs < gap) continue;
+        const idx = nearestReadingIdx(displayReadings, tickMs);
+        if (used.has(idx)) continue;
+        used.add(idx);
+        labels[idx] = fmt(new Date(tickMs));
+      }
+      return labels;
     }
 
     function isMinorTick(isoStr, w) {
@@ -913,7 +981,7 @@
       const showDots = currentWindow === '12h' || currentWindow === '24h';
       const pointRadius = showDots ? (displayReadings.length > 100 ? 2 : 3) : 0;
 
-      const labels    = displayReadings.map(r => chartLabel(r.recorded_at, currentWindow));
+      const labels    = buildLabels(displayReadings, currentWindow);
       const values    = displayReadings.map(r => r.value);
       const ptColors  = displayReadings.map(r => bgColor(r.value));
       const lowLine   = Array(displayReadings.length).fill(lastData.target.low);
