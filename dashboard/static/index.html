@@ -264,7 +264,7 @@
         padding-bottom: env(safe-area-inset-bottom, 0px);
       }
       /* Clear fixed tab bar + safe area */
-      main { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+      main { padding-bottom: calc(44px + env(safe-area-inset-bottom, 0px)); }
       /* Hide chart + distribution strip when alarms tab is active */
       main.tab-alarms-active > .card,
       main.tab-alarms-active #distribution-strip { display: none; }
@@ -431,7 +431,7 @@
     }
     .tab-btn {
       flex: 1;
-      padding: 0.625rem;
+      padding: 0.4rem 0.625rem;
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
@@ -479,8 +479,9 @@
         align-items: start;
       }
 
-      /* Left column items — reset card margin so grid gap is the only spacing */
-      main > .card, main > #distribution-strip, main > #tab-stats { margin-bottom: 0; }
+      /* Reset card margins so grid/flex gap is the only spacing */
+      main > .card, main > #distribution-strip, main > #tab-stats,
+      #desktop-right > .card { margin-bottom: 0; }
       #desktop-hero  { display: block; grid-column: 1; }
       .card:has(#bg-chart) { grid-column: 1; }
       #distribution-strip  { display: block; grid-column: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; box-shadow: var(--shadow); padding: 1rem 1.125rem; }
@@ -1436,12 +1437,13 @@
             id: 'centerText',
             afterDraw(ch) {
               const { ctx, chartArea: { width, height, left, top } } = ch;
+              const currentTir = ch.data.datasets[0].data[1] ?? 0;
               ctx.save();
               ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
               const cx = left + width / 2, cy = top + height / 2;
               ctx.font = 'bold 20px system-ui,sans-serif';
-              ctx.fillStyle = tir >= 70 ? cssVar('--normal') : tir >= 54 ? cssVar('--high') : cssVar('--low');
-              ctx.fillText(tir + '%', cx, cy - 8);
+              ctx.fillStyle = currentTir >= 70 ? cssVar('--normal') : currentTir >= 54 ? cssVar('--high') : cssVar('--low');
+              ctx.fillText(currentTir + '%', cx, cy - 8);
               ctx.font = '9px system-ui,sans-serif';
               ctx.fillStyle = cssVar('--text-muted');
               ctx.fillText('in range', cx, cy + 10);
@@ -1453,18 +1455,16 @@
 
       const legend = document.getElementById('desktop-tir-legend');
       if (legend) {
-        const tirQuality  = tir >= 70 ? cssVar('--normal') : tir >= 54 ? cssVar('--high') : cssVar('--low');
-        const tarQuality  = tar <= 25 ? cssVar('--normal') : tar <= 36 ? cssVar('--high') : cssVar('--low');
         const rows = [
-          { label: 'Below range', pct: tbr, swatch: cssVar('--low'),    pctColor: cssVar('--low') },
-          { label: 'In range',    pct: tir, swatch: cssVar('--normal'), pctColor: tirQuality },
-          { label: 'Above range', pct: tar, swatch: cssVar('--high'),   pctColor: tarQuality },
+          { label: 'Below range', pct: tbr, swatch: cssVar('--low')    },
+          { label: 'In range',    pct: tir, swatch: cssVar('--normal') },
+          { label: 'Above range', pct: tar, swatch: cssVar('--high')   },
         ];
         legend.innerHTML = rows.map(r =>
           `<div class="desktop-tir-row">
             <span class="desktop-tir-swatch" style="background:${r.swatch}"></span>
             <span class="desktop-tir-name">${r.label}</span>
-            <span class="desktop-tir-pct" style="color:${r.pctColor}">${r.pct}%</span>
+            <span class="desktop-tir-pct">${r.pct}%</span>
           </div>`
         ).join('');
       }
