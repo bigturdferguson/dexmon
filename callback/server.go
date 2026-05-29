@@ -1,6 +1,7 @@
 package callback
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,31 +14,45 @@ import (
 )
 
 type Server struct {
-	store *store.Store
-	port  int
-	mux   *http.ServeMux
+	store    *store.Store
+	port     int
+	handler  http.Handler
+	appToken string
 }
 
-func New(st *store.Store, port int, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int, watchdogURL string) *Server {
-	s := &Server{store: st, port: port, mux: http.NewServeMux()}
+func New(st *store.Store, port int, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int, watchdogURL string, appToken string) *Server {
+	s := &Server{store: st, port: port, appToken: appToken}
+	mux := http.NewServeMux()
 	dash := dashboard.New(st, account, alarms, recipients, targetLow, targetHigh, watchdogURL)
-	s.mux.Handle("GET /", dash)
-	s.mux.Handle("GET /api/dashboard", dash)
-	s.mux.HandleFunc("POST /pushover/callback", s.handleCallback)
+	mux.Handle("GET /", dash)
+	mux.Handle("GET /api/dashboard", dash)
+	mux.HandleFunc("POST /pushover/callback", s.handleCallback)
+	s.handler = securityHeaders(mux)
 	return s
 }
 
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Content-Security-Policy",
+			"default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mux.ServeHTTP(w, r)
+	s.handler.ServeHTTP(w, r)
 }
 
 func (s *Server) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Printf("callback server listening on %s", addr)
-	return http.ListenAndServe(addr, s.mux)
+	return http.ListenAndServe(addr, s.handler)
 }
 
 type callbackPayload struct {
+	Token          string `json:"token"`
 	Receipt        string `json:"receipt"`
 	AcknowledgedAt int64  `json:"acknowledged_at"`
 	Snooze         int    `json:"snooze"`
@@ -47,6 +62,11 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	var payload callbackPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	if s.appToken != "" && subtle.ConstantTimeCompare([]byte(payload.Token), []byte(s.appToken)) != 1 {
+		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
 

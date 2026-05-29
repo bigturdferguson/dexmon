@@ -40,7 +40,7 @@ func TestCallback_ClearsReceiptOnAck(t *testing.T) {
 		ReceiptExpiresAt: &expires,
 	})
 
-	srv := callback.New(st, 0, "", nil, nil, 70, 180, "")
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "")
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "receipt-123",
 		"acknowledged_at": time.Now().Unix(),
@@ -77,7 +77,7 @@ func TestCallback_SetsSnoozedUntilWhenSnoozeProvided(t *testing.T) {
 		ReceiptExpiresAt: &expires,
 	})
 
-	srv := callback.New(st, 0, "", nil, nil, 70, 180, "")
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "")
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "receipt-456",
 		"acknowledged_at": time.Now().Unix(),
@@ -125,7 +125,7 @@ func TestCallback_ClearsPreexistingSnoozeOnAckWithoutSnooze(t *testing.T) {
 		t.Fatalf("seed state: %v", err)
 	}
 
-	srv := callback.New(st, 0, "", nil, nil, 70, 180, "")
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "")
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "receipt-789",
 		"acknowledged_at": time.Now().Unix(),
@@ -147,7 +147,7 @@ func TestCallback_ClearsPreexistingSnoozeOnAckWithoutSnooze(t *testing.T) {
 
 func TestCallback_IgnoresUnknownReceipt(t *testing.T) {
 	st := newTestStore(t)
-	srv := callback.New(st, 0, "", nil, nil, 70, 180, "")
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "")
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "unknown-receipt",
@@ -190,7 +190,7 @@ func TestCallback_LogsAcknowledgment(t *testing.T) {
 
 	buf := captureLog(t)
 
-	srv := callback.New(st, 0, "", nil, nil, 70, 180, "")
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "")
 	body, _ := json.Marshal(map[string]interface{}{
 		"receipt":         "receipt-log-test",
 		"acknowledged_at": time.Now().Unix(),
@@ -206,5 +206,73 @@ func TestCallback_LogsAcknowledgment(t *testing.T) {
 	}
 	if !strings.Contains(got, "snoozed") {
 		t.Errorf("expected snooze in ack log, got: %q", got)
+	}
+}
+
+func TestCallback_RejectsBadToken(t *testing.T) {
+	st := newTestStore(t)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "real-app-token")
+	body, _ := json.Marshal(map[string]interface{}{
+		"token":           "wrong-token",
+		"receipt":         "some-receipt",
+		"acknowledged_at": time.Now().Unix(),
+	})
+	req := httptest.NewRequest(http.MethodPost, "/pushover/callback", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for bad token, got %d", w.Code)
+	}
+}
+
+func TestCallback_AcceptsGoodToken(t *testing.T) {
+	st := newTestStore(t)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "real-app-token")
+	body, _ := json.Marshal(map[string]interface{}{
+		"token":           "real-app-token",
+		"receipt":         "unknown-receipt",
+		"acknowledged_at": time.Now().Unix(),
+	})
+	req := httptest.NewRequest(http.MethodPost, "/pushover/callback", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for valid token, got %d", w.Code)
+	}
+}
+
+func TestCallback_SkipsVerificationWhenAppTokenEmpty(t *testing.T) {
+	st := newTestStore(t)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "")
+	body, _ := json.Marshal(map[string]interface{}{
+		"token":           "any-token",
+		"receipt":         "unknown-receipt",
+		"acknowledged_at": time.Now().Unix(),
+	})
+	req := httptest.NewRequest(http.MethodPost, "/pushover/callback", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 when app token not configured, got %d", w.Code)
+	}
+}
+
+func TestCallback_SecurityHeaders(t *testing.T) {
+	st := newTestStore(t)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "")
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	headers := []struct{ name, want string }{
+		{"X-Content-Type-Options", "nosniff"},
+		{"X-Frame-Options", "DENY"},
+		{"Content-Security-Policy", "default-src 'self'"},
+	}
+	for _, h := range headers {
+		got := w.Header().Get(h.name)
+		if !strings.Contains(got, h.want) {
+			t.Errorf("header %s: got %q, want to contain %q", h.name, got, h.want)
+		}
 	}
 }

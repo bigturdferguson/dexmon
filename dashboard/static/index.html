@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         media="(max-width: 640px)" rel="stylesheet">
   <title>dexmon</title>
@@ -14,7 +15,7 @@
       }
     })();
   </script>
-  <script src="/chart.min.js"></script>
+  <script src="/chart.min.js" defer></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -70,7 +71,8 @@
     #desktop-right { display: none; }
     .alarms-overlay { display: none; }
     .alarms-flyout { display: none; }
-    #theme-btn {
+    #theme-btn,
+    #fullscreen-btn {
       background: none;
       border: 1px solid var(--border);
       border-radius: 0.375rem;
@@ -627,7 +629,7 @@
     <div class="header-right">
       <span id="last-updated">Loading…</span>
       <div class="wsel-wrap" id="header-window-select">
-        <button class="wsel-btn" id="header-wsel-btn" onclick="toggleHeaderWindowSelect()">
+        <button class="wsel-btn" id="header-wsel-btn" onclick="toggleHeaderWindowSelect()" aria-haspopup="listbox" aria-expanded="false">
           <span id="header-wsel-label">24h</span>
           <span class="wsel-chevron">▼</span>
         </button>
@@ -646,7 +648,7 @@
         </div>
       </div>
       <div class="wsel-wrap" id="desktop-wsel-wrap">
-        <button class="wsel-btn" id="desktop-wsel-btn" onclick="toggleDesktopWindowSelect()">
+        <button class="wsel-btn" id="desktop-wsel-btn" onclick="toggleDesktopWindowSelect()" aria-haspopup="listbox" aria-expanded="false">
           <span id="desktop-wsel-label">24h</span>
           <span class="wsel-chevron">▼</span>
         </button>
@@ -664,7 +666,7 @@
           <div class="wsel-item" data-window="90d" onclick="setWindow('90d')">90d</div>
         </div>
       </div>
-      <button id="theme-btn" onclick="toggleTheme()">☀︎</button>
+      <button id="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">☀︎</button>
     </div>
   </header>
   <main>
@@ -754,7 +756,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <div class="wsel-wrap" id="window-select">
-            <button class="wsel-btn" id="wsel-btn" onclick="toggleWindowSelect()">
+            <button class="wsel-btn" id="wsel-btn" onclick="toggleWindowSelect()" aria-haspopup="listbox" aria-expanded="false">
               <span id="wsel-label">24h</span>
               <span class="wsel-chevron">▼</span>
             </button>
@@ -772,7 +774,7 @@
               <div class="wsel-item" data-window="90d" onclick="setWindow('90d')">90d</div>
             </div>
           </div>
-          <button id="fullscreen-btn" onclick="toggleFullscreen()" style="background:none;border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;cursor:pointer;font-size:0.9rem;color:var(--text);line-height:1.4;" title="Toggle fullscreen">⤢</button>
+          <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Toggle fullscreen" aria-label="Toggle fullscreen">⤢</button>
         </div>
       </div>
       <div class="chart-wrap"><canvas id="bg-chart"></canvas></div>
@@ -971,16 +973,12 @@
         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function chartTitle(w) {
-      return 'READINGS';
-    }
-
     function updateWindowLabels(w) {
       ['high', 'low', 'avg', 'stddev', 'cv', 'tir', 'quartiles', 'time-low', 'time-high'].forEach(id => {
         const el = document.getElementById('sub-' + id);
         if (el) el.textContent = w;
       });
-      document.getElementById('chart-title').textContent = chartTitle(w);
+      document.getElementById('chart-title').textContent = 'READINGS';
       document.getElementById('wsel-label').textContent = w;
       const hLabel = document.getElementById('header-wsel-label');
       if (hLabel) hLabel.textContent = w;
@@ -992,15 +990,21 @@
     }
 
     function toggleWindowSelect() {
-      document.getElementById('window-select').classList.toggle('open');
+      const wrap = document.getElementById('window-select');
+      wrap.classList.toggle('open');
+      document.getElementById('wsel-btn').setAttribute('aria-expanded', wrap.classList.contains('open') ? 'true' : 'false');
     }
 
     function toggleHeaderWindowSelect() {
-      document.getElementById('header-window-select').classList.toggle('open');
+      const wrap = document.getElementById('header-window-select');
+      wrap.classList.toggle('open');
+      document.getElementById('header-wsel-btn').setAttribute('aria-expanded', wrap.classList.contains('open') ? 'true' : 'false');
     }
 
     function toggleDesktopWindowSelect() {
-      document.getElementById('desktop-wsel-wrap').classList.toggle('open');
+      const wrap = document.getElementById('desktop-wsel-wrap');
+      wrap.classList.toggle('open');
+      document.getElementById('desktop-wsel-btn').setAttribute('aria-expanded', wrap.classList.contains('open') ? 'true' : 'false');
     }
 
     document.addEventListener('click', function(e) {
@@ -1014,10 +1018,15 @@
 
     function setWindow(w) {
       document.getElementById('window-select').classList.remove('open');
+      document.getElementById('wsel-btn').setAttribute('aria-expanded', 'false');
       const hws = document.getElementById('header-window-select');
       if (hws) hws.classList.remove('open');
+      const hBtn = document.getElementById('header-wsel-btn');
+      if (hBtn) hBtn.setAttribute('aria-expanded', 'false');
       const dws = document.getElementById('desktop-wsel-wrap');
       if (dws) dws.classList.remove('open');
+      const dBtn = document.getElementById('desktop-wsel-btn');
+      if (dBtn) dBtn.setAttribute('aria-expanded', 'false');
       currentWindow = w;
       localStorage.setItem('dexmon-window', w);
       if (chart) { chart.destroy(); chart = null; }
@@ -1613,8 +1622,8 @@
       if (!q1 || !med || !q3) return;
 
       const values = (d.readings || []).map(r => r.value).filter(Boolean);
-      const dataMin = values.length ? Math.min(...values) : 40;
-      const dataMax = values.length ? Math.max(...values) : 260;
+      const dataMin = values.length ? values.reduce((a, b) => a < b ? a : b, Infinity) : 40;
+      const dataMax = values.length ? values.reduce((a, b) => a > b ? a : b, -Infinity) : 260;
       const BG_STRIP_MIN = Math.floor((dataMin - 10) / 10) * 10;
       const BG_STRIP_MAX = Math.ceil((dataMax + 10) / 10) * 10;
 
@@ -1998,7 +2007,17 @@
 
     // Re-render when crossing the mobile/desktop breakpoint (e.g. orientation change)
     const layoutMQ = window.matchMedia('(min-width: 641px)');
-    layoutMQ.addEventListener('change', () => fetchAndRender());
+    layoutMQ.addEventListener('change', () => {
+      if (lastData) {
+        renderWidgets(lastData);
+        renderDistributionStrip(lastData);
+        renderChart(lastData.readings || []);
+        renderAlarms(lastData.alarms || []);
+        renderAlarmHistory(lastData.alarm_history || []);
+      } else {
+        fetchAndRender();
+      }
+    });
   </script>
 
   <!-- Alarms flyout (desktop only) -->

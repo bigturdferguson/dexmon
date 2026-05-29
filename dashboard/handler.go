@@ -177,6 +177,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveAPI(w, r)
 	case "/chart.min.js":
 		h.serveStatic(w, r, "static/chart.min.js", "application/javascript")
+	case "/favicon.ico":
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Write([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#6366f1"/></svg>`))
 	default:
 		h.serveStatic(w, r, "static/index.html", "text/html; charset=utf-8")
 	}
@@ -189,6 +193,11 @@ func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request, path, cont
 		return
 	}
 	w.Header().Set("Content-Type", contentType)
+	if path == "static/chart.min.js" {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
 	w.Write(data)
 }
 
