@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        media="(max-width: 640px)" rel="stylesheet">
   <title>dexmon</title>
   <script>
     (function() {
@@ -58,6 +61,10 @@
     header h1 { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; }
     .header-right { display: flex; align-items: center; gap: 0.875rem; }
     #last-updated { font-size: 0.8rem; color: var(--text-muted); }
+    #header-window-select { display: none; }
+    .chart-title-mobile { display: none; }
+    #mobile-hero { display: none; }
+    #distribution-strip { display: none; }
     #theme-btn {
       background: none;
       border: 1px solid var(--border);
@@ -78,11 +85,62 @@
       margin-bottom: 1.25rem;
     }
     @media (max-width: 640px) {
-      .stats-grid { grid-template-columns: 1fr 1fr; }
+      body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+      #last-updated { display: none; }
+      #header-window-select { display: inline-block; }
+      #window-select { display: none; }
+      #chart-title { display: none; }
+      .chart-title-mobile { display: block; }
+      #mobile-hero {
+        display: block;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 0.75rem;
+      }
+      .mobile-hero-cols {
+        display: flex; align-items: stretch; padding: 0.5rem;
+      }
+      .mobile-hero-col {
+        flex: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 0.15rem;
+      }
+      .mobile-hero-val {
+        font-size: 2rem; font-weight: 700; line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .mobile-hero-mid {
+        font-size: 1.1rem; font-weight: 700; line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .mobile-hero-sub {
+        font-size: 0.65rem; color: var(--text-muted); text-align: center;
+      }
+      .mobile-hero-div {
+        width: 1px; background: var(--border);
+        margin: 0.15rem 0.1rem; align-self: stretch;
+      }
+      #distribution-strip {
+        display: block;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 0.75rem; box-shadow: var(--shadow);
+        padding: 0.6rem 0.75rem 0.5rem;
+        margin-bottom: 0.75rem;
+      }
+      .dist-label {
+        font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.5rem;
+      }
+      .dist-strip-wrap { position: relative; height: 42px; }
+      .dist-axis {
+        display: flex; justify-content: space-between; margin-top: 2px;
+      }
+      .dist-axis span { font-size: 0.6875rem; color: var(--text-muted); }
+      .stats-grid { grid-template-columns: 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
       .stats-grid .stat-tir { grid-column: auto; }
-      .stat-tir .tir-bar-wrap { display: none; }
       .stat-current .stat-label-age { display: none; }
       /* Current BG: two-row grid — values row 1, labels row 2 */
       .stat-current .quartile-row {
@@ -138,59 +196,40 @@
       }
       #val-delta { font-size: 1.75rem; }
       #val-trend { font-size: 1.75rem; }
-      /* Avg, Std Dev, CV: label + period on same line, value below */
+      /* Avg, Std Dev, CV: full-width flex row — label left, value right */
       .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto;
-        grid-template-areas:
-          "label sub"
-          "value value";
-        column-gap: 0.3em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.875rem;
       }
       .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-label {
-        grid-area: label;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
         margin-bottom: 0;
-        align-self: baseline;
       }
       .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-sub {
-        grid-area: sub;
-        margin-top: 0;
-        display: block;
-        align-self: baseline;
+        display: none;
       }
       .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-value {
-        grid-area: value;
-        margin-top: 0.35rem;
+        font-size: 1.1rem;
+        font-weight: 700;
       }
-      /* In Range: same label+period inline treatment */
+      /* In Range: full-width flex row — label left, value right, no bar */
       .stat-tir {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto;
-        grid-template-areas:
-          "label sub"
-          "value value";
-        column-gap: 0.3em;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 0.875rem;
       }
       .stat-tir .stat-label {
-        grid-area: label;
-        margin-bottom: 0;
-        align-self: baseline;
+        margin-bottom: 0; font-size: 0.6875rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
       }
-      .stat-tir .stat-sub {
-        grid-area: sub;
-        margin-top: 0;
-        display: block;
-        align-self: baseline;
-      }
-      .stat-tir .tir-val-row {
-        grid-area: value;
-        margin-top: 0.35rem;
-      }
-      .stat-full .quartile-cell .stat-sub {
-        justify-content: center;
-      }
+      .stat-tir .tir-val-row { font-size: 1.1rem; font-weight: 700; }
+      .stat-tir .tir-bar-wrap { display: none; }
+      .stat-tir .stat-sub { display: none; }
     }
     .stat-card {
       background: var(--surface);
@@ -388,13 +427,53 @@
     <h1>dexmon</h1>
     <div class="header-right">
       <span id="last-updated">Loading…</span>
+      <div class="wsel-wrap" id="header-window-select">
+        <button class="wsel-btn" id="header-wsel-btn" onclick="toggleHeaderWindowSelect()">
+          <span id="header-wsel-label">24h</span>
+          <span class="wsel-chevron">▼</span>
+        </button>
+        <div class="wsel-menu">
+          <div class="wsel-group">Short</div>
+          <div class="wsel-item" data-window="1h"  onclick="setWindow('1h')">1h</div>
+          <div class="wsel-item" data-window="3h"  onclick="setWindow('3h')">3h</div>
+          <div class="wsel-item" data-window="6h"  onclick="setWindow('6h')">6h</div>
+          <div class="wsel-item" data-window="12h" onclick="setWindow('12h')">12h</div>
+          <div class="wsel-divider"></div>
+          <div class="wsel-group">Long</div>
+          <div class="wsel-item" data-window="24h" onclick="setWindow('24h')">24h</div>
+          <div class="wsel-item" data-window="7d"  onclick="setWindow('7d')">7d</div>
+          <div class="wsel-item" data-window="30d" onclick="setWindow('30d')">30d</div>
+          <div class="wsel-item" data-window="90d" onclick="setWindow('90d')">90d</div>
+        </div>
+      </div>
       <button id="theme-btn" onclick="toggleTheme()">☀︎</button>
     </div>
   </header>
   <main>
+    <div id="mobile-hero">
+      <div class="mobile-hero-cols">
+        <div class="mobile-hero-col">
+          <div class="mobile-hero-val" id="mh-current">—</div>
+          <div class="mobile-hero-sub">mg/dL · <span id="mh-age">—</span></div>
+        </div>
+        <div class="mobile-hero-div"></div>
+        <div class="mobile-hero-col">
+          <div class="mobile-hero-mid" id="mh-delta">—</div>
+          <div class="mobile-hero-sub">change</div>
+        </div>
+        <div class="mobile-hero-div"></div>
+        <div class="mobile-hero-col">
+          <div class="mobile-hero-mid" id="mh-trend">—</div>
+          <div class="mobile-hero-sub">trend</div>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-header card-header-row">
-        <div class="card-title" id="chart-title">BG</div>
+        <div>
+          <div class="card-title" id="chart-title">BG</div>
+          <span class="card-title chart-title-mobile">READINGS</span>
+        </div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <div class="wsel-wrap" id="window-select">
             <button class="wsel-btn" id="wsel-btn" onclick="toggleWindowSelect()">
@@ -421,6 +500,14 @@
       <div class="chart-wrap"><canvas id="bg-chart"></canvas></div>
     </div>
 
+    <div id="distribution-strip">
+      <div class="dist-label">Distribution</div>
+      <div class="dist-strip-wrap" id="dist-strip-inner"></div>
+      <div class="dist-axis">
+        <span>40</span><span>70</span><span>130</span><span>180</span><span>260</span>
+      </div>
+    </div>
+
     <div class="tab-bar">
       <button class="tab-btn" data-tab="stats" onclick="setTab('stats')">Stats</button>
       <button class="tab-btn" data-tab="alarms" onclick="setTab('alarms')">Alarms</button>
@@ -428,7 +515,7 @@
 
     <div id="tab-stats" class="tab-panel">
       <div class="stats-grid">
-        <div class="stat-card stat-current">
+        <div class="stat-card stat-current stat-mobile-hide">
           <div class="stat-label">
             <span>Current BG</span>
             <span class="stat-label-age" id="val-current-age"></span>
@@ -488,7 +575,7 @@
           </div>
           <div class="stat-sub" id="sub-tir">24h</div>
         </div>
-        <div class="stat-card stat-full">
+        <div class="stat-card stat-full stat-mobile-hide">
           <div class="stat-label">Quartiles <span id="sub-quartiles" style="font-weight:400;">24h</span></div>
           <div class="quartile-row">
             <div class="quartile-cell">
@@ -607,6 +694,8 @@
       });
       document.getElementById('chart-title').textContent = chartTitle(w);
       document.getElementById('wsel-label').textContent = w;
+      const hLabel = document.getElementById('header-wsel-label');
+      if (hLabel) hLabel.textContent = w;
       document.querySelectorAll('.wsel-item').forEach(b => {
         b.classList.toggle('active', b.dataset.window === w);
       });
@@ -616,13 +705,21 @@
       document.getElementById('window-select').classList.toggle('open');
     }
 
+    function toggleHeaderWindowSelect() {
+      document.getElementById('header-window-select').classList.toggle('open');
+    }
+
     document.addEventListener('click', function(e) {
-      const ws = document.getElementById('window-select');
-      if (ws && !ws.contains(e.target)) ws.classList.remove('open');
+      const ws  = document.getElementById('window-select');
+      const hws = document.getElementById('header-window-select');
+      if (ws  && !ws.contains(e.target))  ws.classList.remove('open');
+      if (hws && !hws.contains(e.target)) hws.classList.remove('open');
     });
 
     function setWindow(w) {
       document.getElementById('window-select').classList.remove('open');
+      const hws = document.getElementById('header-window-select');
+      if (hws) hws.classList.remove('open');
       currentWindow = w;
       localStorage.setItem('dexmon-window', w);
       if (chart) { chart.destroy(); chart = null; }
@@ -885,14 +982,29 @@
       document.getElementById('val-current-age').textContent = cur ? timeAgo(cur.recorded_at) : '';
 
       const deltaEl = document.getElementById('val-delta');
+      let deltaText = '';
       if (deltaEl) {
         if (cur && prev) {
           const delta = cur.value - prev.value;
-          deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
+          deltaText = (delta >= 0 ? '+' : '') + delta;
+          deltaEl.textContent = deltaText;
         } else {
           deltaEl.textContent = '';
         }
       }
+
+      // Mobile hero
+      const mhCur = document.getElementById('mh-current');
+      if (mhCur) {
+        mhCur.textContent = cur ? cur.value : '—';
+        mhCur.className = 'mobile-hero-val' + (cur ? ' ' + bgClass(cur.value) : '');
+      }
+      const mhAge = document.getElementById('mh-age');
+      if (mhAge) mhAge.textContent = cur ? timeAgo(cur.recorded_at) : '—';
+      const mhDelta = document.getElementById('mh-delta');
+      if (mhDelta) mhDelta.textContent = deltaText || '—';
+      const mhTrend = document.getElementById('mh-trend');
+      if (mhTrend) mhTrend.textContent = cur ? (TREND_ARROW[cur.trend] || '—') : '—';
 
       const prevEl = document.getElementById('val-prev');
       prevEl.textContent = prev ? prev.value : '—';
@@ -935,6 +1047,64 @@
       document.getElementById('val-q1').textContent     = d.stats?.q1     || '—';
       document.getElementById('val-median').textContent = d.stats?.median  || '—';
       document.getElementById('val-q3').textContent     = d.stats?.q3      || '—';
+    }
+
+    const BG_STRIP_MIN = 40, BG_STRIP_MAX = 260;
+
+    function renderDistributionStrip(d) {
+      const wrap = document.getElementById('dist-strip-inner');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+
+      const q1  = d.stats?.q1,  med = d.stats?.median, q3 = d.stats?.q3;
+      const low = d.target?.low, high = d.target?.high;
+      if (!q1 || !med || !q3) return;
+
+      const range = BG_STRIP_MAX - BG_STRIP_MIN;
+      const pct  = v => ((v - BG_STRIP_MIN) / range * 100).toFixed(2) + '%';
+      const wPct = (a, b) => ((b - a) / range * 100).toFixed(2) + '%';
+
+      // Target zone background
+      if (low && high) {
+        const tz = document.createElement('div');
+        tz.style.cssText = `position:absolute;left:${pct(low)};width:${wPct(low,high)};` +
+          `top:14px;height:14px;background:rgba(22,163,74,0.1);` +
+          `border:1px solid rgba(22,163,74,0.25);border-radius:3px;`;
+        wrap.appendChild(tz);
+      }
+
+      // Track
+      const track = document.createElement('div');
+      track.style.cssText = 'position:absolute;left:0;right:0;top:19px;height:4px;' +
+        'background:rgba(0,0,0,0.2);border-radius:2px;';
+      wrap.appendChild(track);
+
+      // IQR gradient fill
+      const fill = document.createElement('div');
+      fill.style.cssText = `position:absolute;left:${pct(q1)};width:${wPct(q1,q3)};` +
+        `top:19px;height:4px;border-radius:2px;` +
+        `background:linear-gradient(to right,rgba(99,102,241,0.5),rgba(99,102,241,0.9));`;
+      wrap.appendChild(fill);
+
+      // Median line
+      const medEl = document.createElement('div');
+      medEl.style.cssText = `position:absolute;left:${pct(med)};top:13px;` +
+        `width:2px;height:16px;background:var(--text);border-radius:1px;transform:translateX(-1px);`;
+      wrap.appendChild(medEl);
+
+      // Q labels: value above track, name below track
+      [[q1,'Q1','var(--text-muted)'],[med,'Med','var(--text)'],[q3,'Q3','var(--text-muted)']].forEach(([v,lbl,col])=>{
+        const vEl = document.createElement('div');
+        vEl.style.cssText = `position:absolute;left:${pct(v)};top:0;` +
+          `transform:translateX(-50%);font-size:0.6875rem;font-weight:700;color:${col};white-space:nowrap;`;
+        vEl.textContent = v;
+        wrap.appendChild(vEl);
+        const lEl = document.createElement('div');
+        lEl.style.cssText = `position:absolute;left:${pct(v)};top:30px;` +
+          `transform:translateX(-50%);font-size:0.6rem;color:var(--text-muted);white-space:nowrap;`;
+        lEl.textContent = lbl;
+        wrap.appendChild(lEl);
+      });
     }
 
     function lttb(data, threshold) {
@@ -1214,6 +1384,7 @@
         lastData = d;
         lastAsOf = d.as_of;
         renderWidgets(d);
+        renderDistributionStrip(d);
         renderChart(d.readings || []);
         renderAlarms(d.alarms || []);
         renderAlarmHistory(d.alarm_history || []);
