@@ -16,16 +16,18 @@ import (
 type Server struct {
 	store    *store.Store
 	port     int
-	mux      *http.ServeMux
+	handler  http.Handler
 	appToken string
 }
 
 func New(st *store.Store, port int, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int, watchdogURL string, appToken string) *Server {
-	s := &Server{store: st, port: port, mux: http.NewServeMux(), appToken: appToken}
+	s := &Server{store: st, port: port, appToken: appToken}
+	mux := http.NewServeMux()
 	dash := dashboard.New(st, account, alarms, recipients, targetLow, targetHigh, watchdogURL)
-	s.mux.Handle("GET /", dash)
-	s.mux.Handle("GET /api/dashboard", dash)
-	s.mux.HandleFunc("POST /pushover/callback", s.handleCallback)
+	mux.Handle("GET /", dash)
+	mux.Handle("GET /api/dashboard", dash)
+	mux.HandleFunc("POST /pushover/callback", s.handleCallback)
+	s.handler = securityHeaders(mux)
 	return s
 }
 
@@ -40,13 +42,13 @@ func securityHeaders(next http.Handler) http.Handler {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	securityHeaders(s.mux).ServeHTTP(w, r)
+	s.handler.ServeHTTP(w, r)
 }
 
 func (s *Server) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Printf("callback server listening on %s", addr)
-	return http.ListenAndServe(addr, s.mux)
+	return http.ListenAndServe(addr, s.handler)
 }
 
 type callbackPayload struct {
