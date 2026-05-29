@@ -8,18 +8,36 @@ A long-running Go daemon that monitors a Dexcom Share CGM account, evaluates con
 
 The dashboard is available at `https://<appname>.fly.dev/` and auto-refreshes every 5 minutes.
 
+<p align="center">
+  <img src="docs/images/dashboard-stats.png" width="280" alt="Stats tab — current BG, readings chart, distribution strip, and stat widgets">
+  &nbsp;&nbsp;
+  <img src="docs/images/dashboard-alarms.png" width="280" alt="Alarms tab — alarm status table and alarm history">
+</p>
+
+The dashboard has two tabs — **Stats** and **Alarms**:
+
+**Stats tab**
+
 | Widget | Shows |
 |--------|-------|
 | Current BG | Value, trend arrow (↑↑ ↑ ↗ → ↘ ↓ ↓↓), and time since reading |
-| Previous | Prior reading value and age |
-| High | Maximum BG over the selected window |
-| Low | Minimum BG over the selected window |
+| BG Graph | Line chart with a shaded target range band; hover a point to see the exact BG value and timestamp. ⤢ expands to fullscreen — ESC exits. |
+| Distribution | Strip plot showing quartiles and median across the selected window |
 | Avg | Integer average BG over the selected window |
-| BG Graph | Line chart with a shaded target range band; hover a point to see the exact BG value and timestamp. ⤢ button expands the chart to fullscreen — ESC exits. |
-| Alarms | Per-alarm name, priority, last fired time, and current status |
+| Std Dev | Standard deviation |
+| CV | Coefficient of variation (%) |
+| Target % | Percentage of readings within the target range |
+| Low % | Percentage of readings below target |
+| High % | Percentage of readings above target |
+
+**Alarms tab**
+
+| Widget | Shows |
+|--------|-------|
+| Alarms | Per-alarm name, Pushover priority, last fired time, and current status |
 | Alarm History | Chronological log of every alarm firing within the selected window: alarm name, BG at fire time, and timestamp (newest first) |
 
-Time window pills (1h / 3h / 6h / 12h / 24h) in the chart header control the range shown across all widgets. Supports light and dark themes — toggle with the button in the header. Preferences are saved across page loads.
+Time window pills (1h / 3h / 6h / 12h / 24h) in the header control the range shown across all widgets. Supports light and dark themes — toggle with the moon button in the header. Preferences are saved across page loads.
 
 ---
 
