@@ -144,10 +144,12 @@
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
       /* Explicit placement — .stats-grid prefix beats global .stat-full { grid-column: 1/-1 } */
-      .stats-grid #stat-avg    { grid-column: 1; grid-row: 1; }
-      .stats-grid .stat-tir    { grid-column: 2; grid-row: 1; }
-      .stats-grid #stat-stddev { grid-column: 1; grid-row: 2; }
-      .stats-grid #stat-cv     { grid-column: 2; grid-row: 2; }
+      .stats-grid #stat-avg        { grid-column: 1; grid-row: 1; }
+      .stats-grid .stat-tir        { grid-column: 2; grid-row: 1; }
+      .stats-grid #stat-stddev     { grid-column: 1; grid-row: 2; }
+      .stats-grid #stat-time-low   { grid-column: 2; grid-row: 2; }
+      .stats-grid #stat-cv         { grid-column: 1; grid-row: 3; }
+      .stats-grid #stat-time-high  { grid-column: 2; grid-row: 3; }
       .stat-current .stat-label-age { display: none; }
       /* Current BG: two-row grid — values row 1, labels row 2 */
       .stat-current .quartile-row {
@@ -203,8 +205,8 @@
       }
       #val-delta { font-size: 1.75rem; }
       #val-trend { font-size: 1.75rem; }
-      /* All 4 stat cards: uniform flex row — label left, value right */
-      #stat-avg, #stat-stddev, #stat-cv, .stat-tir {
+      /* All 6 stat cards: uniform flex row — label left, value right */
+      #stat-avg, #stat-stddev, #stat-cv, .stat-tir, #stat-time-low, #stat-time-high {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -213,7 +215,9 @@
       #stat-avg .stat-label,
       #stat-stddev .stat-label,
       #stat-cv .stat-label,
-      .stat-tir .stat-label {
+      .stat-tir .stat-label,
+      #stat-time-low .stat-label,
+      #stat-time-high .stat-label {
         font-size: 0.6875rem;
         font-weight: 700;
         text-transform: uppercase;
@@ -224,7 +228,9 @@
       #stat-avg .stat-value,
       #stat-stddev .stat-value,
       #stat-cv .stat-value,
-      .stats-grid .stat-card.stat-tir .stat-value {
+      .stats-grid .stat-card.stat-tir .stat-value,
+      #stat-time-low .stat-value,
+      #stat-time-high .stat-value {
         font-size: 1.1rem;
         font-weight: 700;
       }
@@ -232,7 +238,9 @@
       #stat-stddev .stat-sub,
       #stat-cv .stat-sub,
       .stat-tir .stat-sub,
-      .stat-tir .tir-bar-wrap { display: none; }
+      .stat-tir .tir-bar-wrap,
+      #stat-time-low .stat-sub,
+      #stat-time-high .stat-sub { display: none; }
       .stat-tir .tir-val-row { display: contents; }
       /* Tab bar: fixed at bottom, extends into safe area */
       /* body prefix lifts specificity above desktop .tab-bar rule that follows media query */
@@ -593,6 +601,16 @@
           </div>
           <div class="stat-sub" id="sub-tir">24h</div>
         </div>
+        <div class="stat-card" id="stat-time-low">
+          <div class="stat-label">Low</div>
+          <div class="stat-value" id="val-time-low">—</div>
+          <div class="stat-sub" id="sub-time-low">24h</div>
+        </div>
+        <div class="stat-card" id="stat-time-high">
+          <div class="stat-label">High</div>
+          <div class="stat-value" id="val-time-high">—</div>
+          <div class="stat-sub" id="sub-time-high">24h</div>
+        </div>
         <div class="stat-card stat-full stat-mobile-hide">
           <div class="stat-label">Quartiles <span id="sub-quartiles" style="font-weight:400;">24h</span></div>
           <div class="quartile-row">
@@ -711,7 +729,7 @@
     }
 
     function updateWindowLabels(w) {
-      ['high', 'low', 'avg', 'stddev', 'cv', 'tir', 'quartiles'].forEach(id => {
+      ['high', 'low', 'avg', 'stddev', 'cv', 'tir', 'quartiles', 'time-low', 'time-high'].forEach(id => {
         const el = document.getElementById('sub-' + id);
         if (el) el.textContent = w;
       });
@@ -1064,6 +1082,32 @@
       } else {
         tirEl.textContent = '—';
         tirEl.className = 'stat-value';
+      }
+
+      // Time Below Range (Low)
+      const tbrEl = document.getElementById('val-time-low');
+      const tbrVal = d.stats?.time_below_range;
+      if (tbrEl) {
+        if (tbrVal != null) {
+          tbrEl.textContent = tbrVal + '%';
+          tbrEl.className = 'stat-value ' + (tbrVal <= 4 ? 'bg-normal' : tbrVal <= 10 ? 'bg-high' : 'bg-low');
+        } else {
+          tbrEl.textContent = '—';
+          tbrEl.className = 'stat-value';
+        }
+      }
+
+      // Time Above Range (High)
+      const tarEl = document.getElementById('val-time-high');
+      const tarVal = d.stats?.time_above_range;
+      if (tarEl) {
+        if (tarVal != null) {
+          tarEl.textContent = tarVal + '%';
+          tarEl.className = 'stat-value ' + (tarVal <= 25 ? 'bg-normal' : tarVal <= 36 ? 'bg-high' : 'bg-low');
+        } else {
+          tarEl.textContent = '—';
+          tarEl.className = 'stat-value';
+        }
       }
 
       // Quartiles
