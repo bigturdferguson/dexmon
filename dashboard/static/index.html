@@ -137,10 +137,14 @@
         display: flex; justify-content: space-between; margin-top: 2px;
       }
       .dist-axis span { font-size: 0.6875rem; color: var(--text-muted); }
-      .stats-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
-      .stats-grid .stat-tir { grid-column: auto; }
+      #stat-avg    { grid-column: 1; grid-row: 1; }
+      .stat-tir    { grid-column: 2; grid-row: 1; }
+      #stat-stddev { grid-column: 1; grid-row: 2; }
+      #stat-cv     { grid-column: 2; grid-row: 2; }
+      .stat-tir .stat-value { font-size: 1.1rem; font-weight: 700; }
       .stat-current .stat-label-age { display: none; }
       /* Current BG: two-row grid — values row 1, labels row 2 */
       .stat-current .quartile-row {
