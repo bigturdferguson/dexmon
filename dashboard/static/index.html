@@ -603,12 +603,23 @@
         if (el) el.textContent = w;
       });
       document.getElementById('chart-title').textContent = chartTitle(w);
-      document.querySelectorAll('.pill').forEach(b => {
+      document.getElementById('wsel-label').textContent = w;
+      document.querySelectorAll('.wsel-item').forEach(b => {
         b.classList.toggle('active', b.dataset.window === w);
       });
     }
 
+    function toggleWindowSelect() {
+      document.getElementById('window-select').classList.toggle('open');
+    }
+
+    document.addEventListener('click', function(e) {
+      const ws = document.getElementById('window-select');
+      if (ws && !ws.contains(e.target)) ws.classList.remove('open');
+    });
+
     function setWindow(w) {
+      document.getElementById('window-select').classList.remove('open');
       currentWindow = w;
       localStorage.setItem('dexmon-window', w);
       if (chart) { chart.destroy(); chart = null; }
