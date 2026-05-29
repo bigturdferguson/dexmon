@@ -731,12 +731,14 @@
       labels[n - 1] = fmt(new Date(endMs));
 
       const used = new Set([0, n - 1]);
-      for (const tickMs of longTickMs(w, startMs, endMs)) {
-        if (tickMs - startMs < gap || endMs - tickMs < gap) continue;
-        const idx = nearestReadingIdx(displayReadings, tickMs);
-        if (used.has(idx)) continue;
-        used.add(idx);
-        labels[idx] = fmt(new Date(tickMs));
+      if (w !== '7d') {
+        for (const tickMs of longTickMs(w, startMs, endMs)) {
+          if (tickMs - startMs < gap || endMs - tickMs < gap) continue;
+          const idx = nearestReadingIdx(displayReadings, tickMs);
+          if (used.has(idx)) continue;
+          used.add(idx);
+          labels[idx] = fmt(new Date(tickMs));
+        }
       }
       return labels;
     }
@@ -1041,7 +1043,7 @@
           },
           ...(showTrend ? [{
             data: trendData,
-            borderColor: 'rgba(99,102,241,0.5)',
+            borderColor: 'rgba(251,146,60,0.85)',
             borderWidth: 2.5,
             pointRadius: 0,
             tension: 0.4,
@@ -1088,7 +1090,7 @@
             },
             ...(showTrend ? [{
               data: trendData,
-              borderColor: 'rgba(99,102,241,0.5)',
+              borderColor: 'rgba(251,146,60,0.85)',
               borderWidth: 2.5,
               pointRadius: 0,
               tension: 0.4,
