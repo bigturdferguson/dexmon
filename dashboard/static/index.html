@@ -137,11 +137,10 @@
         display: flex; justify-content: space-between; margin-top: 2px;
       }
       .dist-axis span { font-size: 0.6875rem; color: var(--text-muted); }
-      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
       .stats-grid .stat-tir { grid-column: auto; }
-      .stat-tir .tir-bar-wrap { display: none; }
       .stat-current .stat-label-age { display: none; }
       /* Current BG: two-row grid — values row 1, labels row 2 */
       .stat-current .quartile-row {
@@ -197,59 +196,40 @@
       }
       #val-delta { font-size: 1.75rem; }
       #val-trend { font-size: 1.75rem; }
-      /* Avg, Std Dev, CV: label + period on same line, value below */
+      /* Avg, Std Dev, CV: full-width flex row — label left, value right */
       .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto;
-        grid-template-areas:
-          "label sub"
-          "value value";
-        column-gap: 0.3em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.875rem;
       }
       .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-label {
-        grid-area: label;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
         margin-bottom: 0;
-        align-self: baseline;
       }
       .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-sub {
-        grid-area: sub;
-        margin-top: 0;
-        display: block;
-        align-self: baseline;
+        display: none;
       }
       .stat-card:not(.stat-current):not(.stat-full):not(.stat-mobile-hide) .stat-value {
-        grid-area: value;
-        margin-top: 0.35rem;
+        font-size: 1.1rem;
+        font-weight: 700;
       }
-      /* In Range: same label+period inline treatment */
+      /* In Range: full-width flex row — label left, value right, no bar */
       .stat-tir {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto;
-        grid-template-areas:
-          "label sub"
-          "value value";
-        column-gap: 0.3em;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 0.875rem;
       }
       .stat-tir .stat-label {
-        grid-area: label;
-        margin-bottom: 0;
-        align-self: baseline;
+        margin-bottom: 0; font-size: 0.6875rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
       }
-      .stat-tir .stat-sub {
-        grid-area: sub;
-        margin-top: 0;
-        display: block;
-        align-self: baseline;
-      }
-      .stat-tir .tir-val-row {
-        grid-area: value;
-        margin-top: 0.35rem;
-      }
-      .stat-full .quartile-cell .stat-sub {
-        justify-content: center;
-      }
+      .stat-tir .tir-val-row { font-size: 1.1rem; font-weight: 700; }
+      .stat-tir .tir-bar-wrap { display: none; }
+      .stat-tir .stat-sub { display: none; }
     }
     .stat-card {
       background: var(--surface);
@@ -595,7 +575,7 @@
           </div>
           <div class="stat-sub" id="sub-tir">24h</div>
         </div>
-        <div class="stat-card stat-full">
+        <div class="stat-card stat-full stat-mobile-hide">
           <div class="stat-label">Quartiles <span id="sub-quartiles" style="font-weight:400;">24h</span></div>
           <div class="quartile-row">
             <div class="quartile-cell">
