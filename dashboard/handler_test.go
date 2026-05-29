@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -535,4 +536,43 @@ func TestDashboardAPI_TimeBelowAboveRange(t *testing.T) {
 		t.Error("JSON missing key: time_above_range")
 	}
 	t.Logf("time_below_range=%v time_above_range=%v", stats["time_below_range"], stats["time_above_range"])
+}
+
+func TestDashboard_CacheHeaders(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
+
+	w := get(t, h, "/chart.min.js")
+	if w.Code != http.StatusOK {
+		t.Fatalf("chart.min.js: expected 200, got %d", w.Code)
+	}
+	cc := w.Header().Get("Cache-Control")
+	if !strings.Contains(cc, "max-age=31536000") {
+		t.Errorf("chart.min.js Cache-Control: got %q, want to contain max-age=31536000", cc)
+	}
+	if !strings.Contains(cc, "immutable") {
+		t.Errorf("chart.min.js Cache-Control: got %q, want to contain immutable", cc)
+	}
+
+	w = get(t, h, "/")
+	cc = w.Header().Get("Cache-Control")
+	if cc != "no-cache" {
+		t.Errorf("index.html Cache-Control: got %q, want no-cache", cc)
+	}
+}
+
+func TestDashboard_Favicon(t *testing.T) {
+	s := newTestStore(t)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
+	w := get(t, h, "/favicon.ico")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	ct := w.Header().Get("Content-Type")
+	if ct != "image/svg+xml" {
+		t.Errorf("Content-Type: got %q, want image/svg+xml", ct)
+	}
+	if !strings.Contains(w.Body.String(), "<svg") {
+		t.Error("expected SVG content in favicon response")
+	}
 }
