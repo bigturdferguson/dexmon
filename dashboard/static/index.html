@@ -93,6 +93,9 @@
       .chart-title-mobile { display: block; }
       #mobile-hero {
         display: block;
+        position: sticky;
+        top: var(--header-h, 49px);
+        z-index: 99;
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: 0.75rem;
@@ -230,6 +233,23 @@
       #stat-cv .stat-sub,
       .stat-tir .stat-sub,
       .stat-tir .tir-bar-wrap { display: none; }
+      /* Tab bar: fixed at bottom */
+      .tab-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        border-radius: 0;
+        border: none;
+        border-top: 1px solid var(--border);
+        margin-bottom: 0;
+      }
+      /* Clear fixed tab bar */
+      main { padding-bottom: 56px; }
+      /* Hide chart + distribution strip when alarms tab is active */
+      main.tab-alarms-active > .card,
+      main.tab-alarms-active #distribution-strip { display: none; }
     }
     .stat-card {
       background: var(--surface);
@@ -1386,6 +1406,7 @@
       document.getElementById('tab-' + name).classList.add('tab-active');
       document.querySelector('[data-tab="' + name + '"]').classList.add('tab-btn-active');
       localStorage.setItem('dexmon-tab', name);
+      document.querySelector('main').classList.toggle('tab-alarms-active', name === 'alarms');
     }
 
     // ── fetch / refresh ────────────────────────────────────────────────────
@@ -1411,6 +1432,9 @@
         el.className = 'update-error';
       }
     }
+
+    const _hdr = document.querySelector('header');
+    if (_hdr) document.documentElement.style.setProperty('--header-h', _hdr.offsetHeight + 'px');
 
     updateWindowLabels(currentWindow);
     setTab(localStorage.getItem('dexmon-tab') || 'stats');
