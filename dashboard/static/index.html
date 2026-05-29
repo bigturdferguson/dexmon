@@ -63,6 +63,7 @@
     #last-updated { font-size: 0.8rem; color: var(--text-muted); }
     #header-window-select { display: none; }
     .chart-title-mobile { display: none; }
+    #mobile-hero { display: none; }
     #theme-btn {
       background: none;
       border: 1px solid var(--border);
@@ -89,6 +90,36 @@
       #window-select { display: none; }
       #chart-title { display: none; }
       .chart-title-mobile { display: block; }
+      #mobile-hero {
+        display: block;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 0.75rem;
+      }
+      .mobile-hero-cols {
+        display: flex; align-items: stretch; padding: 0.5rem;
+      }
+      .mobile-hero-col {
+        flex: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 0.15rem;
+      }
+      .mobile-hero-val {
+        font-size: 2rem; font-weight: 700; line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .mobile-hero-mid {
+        font-size: 1.1rem; font-weight: 700; line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .mobile-hero-sub {
+        font-size: 0.65rem; color: var(--text-muted); text-align: center;
+      }
+      .mobile-hero-div {
+        width: 1px; background: var(--border);
+        margin: 0.15rem 0.1rem; align-self: stretch;
+      }
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
@@ -422,6 +453,24 @@
     </div>
   </header>
   <main>
+    <div id="mobile-hero">
+      <div class="mobile-hero-cols">
+        <div class="mobile-hero-col">
+          <div class="mobile-hero-val" id="mh-current">—</div>
+          <div class="mobile-hero-sub">mg/dL · <span id="mh-age">—</span></div>
+        </div>
+        <div class="mobile-hero-div"></div>
+        <div class="mobile-hero-col">
+          <div class="mobile-hero-mid" id="mh-delta">—</div>
+          <div class="mobile-hero-sub">change</div>
+        </div>
+        <div class="mobile-hero-div"></div>
+        <div class="mobile-hero-col">
+          <div class="mobile-hero-mid" id="mh-trend">—</div>
+          <div class="mobile-hero-sub">trend</div>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-header card-header-row">
         <div>
@@ -461,7 +510,7 @@
 
     <div id="tab-stats" class="tab-panel">
       <div class="stats-grid">
-        <div class="stat-card stat-current">
+        <div class="stat-card stat-current stat-mobile-hide">
           <div class="stat-label">
             <span>Current BG</span>
             <span class="stat-label-age" id="val-current-age"></span>
@@ -928,14 +977,29 @@
       document.getElementById('val-current-age').textContent = cur ? timeAgo(cur.recorded_at) : '';
 
       const deltaEl = document.getElementById('val-delta');
+      let deltaText = '';
       if (deltaEl) {
         if (cur && prev) {
           const delta = cur.value - prev.value;
-          deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
+          deltaText = (delta >= 0 ? '+' : '') + delta;
+          deltaEl.textContent = deltaText;
         } else {
           deltaEl.textContent = '';
         }
       }
+
+      // Mobile hero
+      const mhCur = document.getElementById('mh-current');
+      if (mhCur) {
+        mhCur.textContent = cur ? cur.value : '—';
+        mhCur.className = 'mobile-hero-val' + (cur ? ' ' + bgClass(cur.value) : '');
+      }
+      const mhAge = document.getElementById('mh-age');
+      if (mhAge) mhAge.textContent = cur ? timeAgo(cur.recorded_at) : '—';
+      const mhDelta = document.getElementById('mh-delta');
+      if (mhDelta) mhDelta.textContent = deltaText || '—';
+      const mhTrend = document.getElementById('mh-trend');
+      if (mhTrend) mhTrend.textContent = cur ? (TREND_ARROW[cur.trend] || '—') : '—';
 
       const prevEl = document.getElementById('val-prev');
       prevEl.textContent = prev ? prev.value : '—';
