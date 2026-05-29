@@ -206,7 +206,8 @@
       #val-delta { font-size: 1.75rem; }
       #val-trend { font-size: 1.75rem; }
       /* All 6 stat cards: uniform flex row — label left, value right */
-      #stat-avg, #stat-stddev, #stat-cv, .stat-tir, #stat-time-low, #stat-time-high {
+      /* .stats-grid .stat-tir has specificity (0,0,2,0) to beat global .stat-card (0,0,1,0) */
+      #stat-avg, #stat-stddev, #stat-cv, .stats-grid .stat-tir, #stat-time-low, #stat-time-high {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -215,7 +216,7 @@
       #stat-avg .stat-label,
       #stat-stddev .stat-label,
       #stat-cv .stat-label,
-      .stat-tir .stat-label,
+      .stats-grid .stat-tir .stat-label,
       #stat-time-low .stat-label,
       #stat-time-high .stat-label {
         font-size: 0.6875rem;
@@ -237,11 +238,12 @@
       #stat-avg .stat-sub,
       #stat-stddev .stat-sub,
       #stat-cv .stat-sub,
-      .stat-tir .stat-sub,
-      .stat-tir .tir-bar-wrap,
+      .stats-grid .stat-tir .stat-sub,
+      .stats-grid .stat-tir .tir-bar-wrap,
       #stat-time-low .stat-sub,
       #stat-time-high .stat-sub { display: none; }
-      .stat-tir .tir-val-row { display: contents; }
+      /* display:contents makes .tir-val-row layout-transparent so the card height matches siblings */
+      .stats-grid .stat-tir .tir-val-row { display: contents; }
       /* Tab bar: fixed at bottom, extends into safe area */
       /* body prefix lifts specificity above desktop .tab-bar rule that follows media query */
       body .tab-bar {
@@ -444,6 +446,7 @@
     .tab-panel.tab-active { display: block; }
     /* ── New stat widgets ── */
     .stat-full { grid-column: 1 / -1; }
+    .tir-val-row { display: flex; align-items: center; gap: 0.75rem; }
     .tir-bar-wrap { flex: 1; background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
     .tir-bar { height: 100%; border-radius: 99px; background: var(--normal); width: 0%; transition: width 0.3s; }
     .quartile-row { display: flex; justify-content: space-around; margin-top: 0.4rem; align-items: center; }
@@ -595,7 +598,7 @@
         </div>
         <div class="stat-card stat-full stat-tir">
           <div class="stat-label">Target</div>
-          <div class="tir-val-row" style="display:flex;align-items:center;gap:0.75rem;">
+          <div class="tir-val-row">
             <div class="stat-value" id="val-tir">—</div>
             <div class="tir-bar-wrap"><div class="tir-bar" id="tir-bar"></div></div>
           </div>
