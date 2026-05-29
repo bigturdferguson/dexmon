@@ -1995,6 +1995,10 @@
     fetchAndRender();
     setInterval(fetchAndRender, REFRESH_MS);
     setInterval(updateLastUpdated, 60 * 1000);
+
+    // Re-render when crossing the mobile/desktop breakpoint (e.g. orientation change)
+    const layoutMQ = window.matchMedia('(min-width: 641px)');
+    layoutMQ.addEventListener('change', () => fetchAndRender());
   </script>
 
   <!-- Alarms flyout (desktop only) -->
