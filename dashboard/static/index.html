@@ -263,7 +263,7 @@
         padding-bottom: env(safe-area-inset-bottom, 0px);
       }
       /* Clear fixed tab bar + safe area */
-      main { padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px)); }
+      main { padding-bottom: calc(35px + env(safe-area-inset-bottom, 0px)); }
       /* Hide chart + distribution strip when alarms tab is active */
       main.tab-alarms-active > .card,
       main.tab-alarms-active #distribution-strip { display: none; }
@@ -331,7 +331,7 @@
       color: var(--text-muted);
       margin-bottom: 1rem;
     }
-    .chart-wrap { position: relative; height: 220px; }
+    .chart-wrap { position: relative; height: 210px; }
     /* ── Fullscreen chart ── */
     .card.fullscreen {
       position: fixed;
@@ -430,7 +430,7 @@
     }
     .tab-btn {
       flex: 1;
-      padding: 0.2rem 0.625rem;
+      padding: 0.45rem 0.625rem;
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
