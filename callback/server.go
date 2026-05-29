@@ -1,6 +1,7 @@
 package callback
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,13 +14,14 @@ import (
 )
 
 type Server struct {
-	store *store.Store
-	port  int
-	mux   *http.ServeMux
+	store    *store.Store
+	port     int
+	mux      *http.ServeMux
+	appToken string
 }
 
-func New(st *store.Store, port int, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int, watchdogURL string) *Server {
-	s := &Server{store: st, port: port, mux: http.NewServeMux()}
+func New(st *store.Store, port int, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int, watchdogURL string, appToken string) *Server {
+	s := &Server{store: st, port: port, mux: http.NewServeMux(), appToken: appToken}
 	dash := dashboard.New(st, account, alarms, recipients, targetLow, targetHigh, watchdogURL)
 	s.mux.Handle("GET /", dash)
 	s.mux.Handle("GET /api/dashboard", dash)
@@ -38,6 +40,7 @@ func (s *Server) Start() error {
 }
 
 type callbackPayload struct {
+	Token          string `json:"token"`
 	Receipt        string `json:"receipt"`
 	AcknowledgedAt int64  `json:"acknowledged_at"`
 	Snooze         int    `json:"snooze"`
@@ -47,6 +50,11 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	var payload callbackPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	if s.appToken != "" && subtle.ConstantTimeCompare([]byte(payload.Token), []byte(s.appToken)) != 1 {
+		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
 
