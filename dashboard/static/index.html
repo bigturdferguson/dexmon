@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         media="(max-width: 640px)" rel="stylesheet">
   <title>dexmon</title>
@@ -14,7 +15,7 @@
       }
     })();
   </script>
-  <script src="/chart.min.js"></script>
+  <script src="/chart.min.js" defer></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -1998,7 +1999,17 @@
 
     // Re-render when crossing the mobile/desktop breakpoint (e.g. orientation change)
     const layoutMQ = window.matchMedia('(min-width: 641px)');
-    layoutMQ.addEventListener('change', () => fetchAndRender());
+    layoutMQ.addEventListener('change', () => {
+      if (lastData) {
+        renderWidgets(lastData);
+        renderDistributionStrip(lastData);
+        renderChart(lastData.readings || []);
+        renderAlarms(lastData.alarms || []);
+        renderAlarmHistory(lastData.alarm_history || []);
+      } else {
+        fetchAndRender();
+      }
+    });
   </script>
 
   <!-- Alarms flyout (desktop only) -->
