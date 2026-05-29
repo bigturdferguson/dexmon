@@ -739,11 +739,12 @@
     }
 
     function isMinorTick(isoStr, w) {
-      const dt = new Date(isoStr);
-      if (w === '12h' || w === '24h') return dt.getMinutes() === 30;
-      if (w === '90d') return dt.getHours() === 0 && dt.getMinutes() === 0 && dt.getDate() === 15;
-      // 7d and 30d: noon mark
-      return dt.getHours() === 12 && dt.getMinutes() === 0;
+      const dt  = new Date(isoStr);
+      const min = dt.getMinutes();
+      if (w === '1h')  return min % 5 === 0 && min % 15 !== 0;
+      if (w === '3h')  return min === 15 || min === 45;
+      if (w === '6h' || w === '12h' || w === '24h') return min === 30;
+      return false; // no minor ticks on 7d / 30d / 90d
     }
 
     const rulerPlugin = {
