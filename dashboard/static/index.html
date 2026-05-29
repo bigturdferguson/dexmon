@@ -60,11 +60,16 @@
     }
     header h1 { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; }
     .header-right { display: flex; align-items: center; gap: 0.875rem; }
-    #last-updated { font-size: 0.8rem; color: var(--text-muted); }
+    #last-updated { display: none; }
     #header-window-select { display: none; }
+    #desktop-wsel-wrap { display: none; }
     .chart-title-mobile { display: none; }
     #mobile-hero { display: none; }
     #distribution-strip { display: none; }
+    #desktop-hero { display: none; }
+    #desktop-right { display: none; }
+    .alarms-overlay { display: none; }
+    .alarms-flyout { display: none; }
     #theme-btn {
       background: none;
       border: 1px solid var(--border);
@@ -75,7 +80,7 @@
       color: var(--text);
       line-height: 1.4;
     }
-    /* ── Layout ── */
+    /* ── Layout (mobile default; desktop overridden in min-width block) ── */
     main { max-width: 1200px; margin: 0 auto; padding: 1.25rem 1.5rem; }
     /* ── Stat grid ── */
     .stats-grid {
@@ -456,6 +461,162 @@
     .stat-current .quartile-cell { display: flex; align-items: baseline; gap: 0.25rem; }
     .stat-current .quartile-cell:first-child .stat-value { font-size: 2.25rem; }
     .quartile-divider { color: var(--border); font-size: 1.5rem; line-height: 1; }
+
+    /* ── Desktop layout ── */
+    @media (min-width: 641px) {
+      /* Header: show desktop window selector, hide mobile one */
+      #desktop-wsel-wrap    { display: inline-block; }
+      #header-window-select { display: none; }
+      #window-select        { display: none; }
+
+      /* Two-column main grid */
+      main {
+        max-width: 1280px;
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      /* Left column items */
+      #desktop-hero  { display: block; grid-column: 1; }
+      .card:has(#bg-chart) { grid-column: 1; }
+      #distribution-strip  { display: block; grid-column: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; box-shadow: var(--shadow); padding: 1rem 1.125rem; }
+      #tab-stats           { grid-column: 1; }
+      #distribution-strip .dist-label { display: none; }
+
+      /* Right column */
+      #desktop-right {
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+        grid-column: 2;
+        grid-row: 1 / 99;
+      }
+
+      /* Tab panels: both visible, tab bar hidden */
+      .tab-bar   { display: none; }
+      .tab-panel { display: block; }
+      #tab-alarms { display: none; }
+
+      /* Distribution strip heading */
+      #distribution-strip::before {
+        content: 'DISTRIBUTION';
+        display: block;
+        font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.75rem;
+      }
+
+      /* Stats grid: only show Avg/StdDev/CV */
+      #tab-stats .stats-grid { grid-template-columns: 1fr 1fr 1fr; margin-bottom: 0; }
+      #tab-stats .stat-current,
+      #tab-stats .stat-mobile-hide,
+      #tab-stats .stat-tir,
+      #tab-stats #stat-time-low,
+      #tab-stats #stat-time-high { display: none; }
+      #tab-stats #stat-avg,
+      #tab-stats #stat-stddev,
+      #tab-stats #stat-cv { display: block; }
+
+      /* Desktop hero card */
+      #dh-body {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      #dh-left {
+        display: flex;
+        align-items: baseline;
+        gap: 0.3rem;
+        flex-shrink: 0;
+      }
+      #dh-val { font-size: 3.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+      .dh-unit { font-size: 0.875rem; color: var(--text-muted); }
+      .dh-divider {
+        width: 1px; align-self: stretch;
+        background: var(--border); margin: 0.25rem 0; flex-shrink: 0;
+      }
+      #dh-meta {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0 1.5rem;
+        flex: 1;
+      }
+      .dh-meta-label {
+        font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.2rem;
+      }
+      .dh-meta-val {
+        font-size: 1.625rem; font-weight: 700; line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .dh-meta-age { font-size: 1.25rem; color: var(--text-muted); }
+
+      /* Right panel: donut */
+      #desktop-donut-wrap {
+        display: flex; justify-content: center; padding: 0.5rem 0 0.75rem;
+      }
+      #desktop-donut-canvas { width: 160px !important; height: 160px !important; }
+      #desktop-tir-legend { display: flex; flex-direction: column; gap: 0.4rem; }
+      .desktop-tir-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+      .desktop-tir-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+      .desktop-tir-name { color: var(--text-muted); flex: 1; }
+      .desktop-tir-pct { font-weight: 700; }
+
+      /* Right panel: alarms widget */
+      #desktop-alarms-widget { cursor: pointer; transition: border-color 0.15s; }
+      #desktop-alarms-widget:hover { border-color: #475569; }
+      .desktop-widget-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.625rem; }
+      .desktop-view-all { font-size: 0.75rem; color: var(--text-muted); }
+      .desktop-alarm-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.825rem; }
+      .desktop-alarm-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+      .desktop-alarm-name { flex: 1; }
+      .desktop-alarm-divider { height: 1px; background: var(--border); margin: 0.2rem 0; }
+
+      /* Right panel: health widget */
+      .desktop-health-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.825rem; }
+      .desktop-health-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+      .desktop-health-name { flex: 1; }
+      .desktop-health-status { font-size: 0.75rem; font-weight: 600; }
+      .desktop-health-sub { font-size: 0.7rem; color: var(--text-muted); padding-left: 1.375rem; margin-top: -0.1rem; padding-bottom: 0.15rem; }
+      .desktop-health-divider { height: 1px; background: var(--border); margin: 0.2rem 0; }
+
+      /* Flyout overlay */
+      .alarms-overlay.open {
+        display: block;
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.45); z-index: 200;
+      }
+      /* Flyout panel */
+      .alarms-flyout.open {
+        display: flex; flex-direction: column;
+        position: fixed; top: 0; right: 0; bottom: 0; width: 480px;
+        background: var(--surface); border-left: 1px solid var(--border);
+        z-index: 201; box-shadow: -4px 0 24px rgba(0,0,0,0.35);
+      }
+      .alarms-flyout-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      }
+      .alarms-flyout-title { font-size: 1rem; font-weight: 700; }
+      .alarms-flyout-close {
+        background: none; border: 1px solid var(--border); border-radius: 0.375rem;
+        padding: 0.2rem 0.5rem; cursor: pointer; font-size: 1rem; color: var(--text-muted);
+      }
+      .alarms-flyout-body { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+      .alarms-flyout-section-title {
+        font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.625rem;
+      }
+      .alarms-table { width: 100%; border-collapse: collapse; font-size: 0.825rem; }
+      .alarms-table th {
+        text-align: left; padding: 0.35rem 0.625rem;
+        font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); border-bottom: 1px solid var(--border);
+      }
+      .alarms-table td { padding: 0.55rem 0.625rem; border-bottom: 1px solid var(--border); }
+      .alarms-table tr:last-child td { border-bottom: none; }
+    }
   </style>
 </head>
 <body>
@@ -482,10 +643,89 @@
           <div class="wsel-item" data-window="90d" onclick="setWindow('90d')">90d</div>
         </div>
       </div>
+      <div class="wsel-wrap" id="desktop-wsel-wrap">
+        <button class="wsel-btn" id="desktop-wsel-btn" onclick="toggleDesktopWindowSelect()">
+          <span id="desktop-wsel-label">24h</span>
+          <span class="wsel-chevron">▼</span>
+        </button>
+        <div class="wsel-menu" id="desktop-wsel-menu">
+          <div class="wsel-group">Short</div>
+          <div class="wsel-item" data-window="1h"  onclick="setWindow('1h')">1h</div>
+          <div class="wsel-item" data-window="3h"  onclick="setWindow('3h')">3h</div>
+          <div class="wsel-item" data-window="6h"  onclick="setWindow('6h')">6h</div>
+          <div class="wsel-item" data-window="12h" onclick="setWindow('12h')">12h</div>
+          <div class="wsel-divider"></div>
+          <div class="wsel-group">Long</div>
+          <div class="wsel-item" data-window="24h" onclick="setWindow('24h')">24h</div>
+          <div class="wsel-item" data-window="7d"  onclick="setWindow('7d')">7d</div>
+          <div class="wsel-item" data-window="30d" onclick="setWindow('30d')">30d</div>
+          <div class="wsel-item" data-window="90d" onclick="setWindow('90d')">90d</div>
+        </div>
+      </div>
       <button id="theme-btn" onclick="toggleTheme()">☀︎</button>
     </div>
   </header>
   <main>
+    <!-- Desktop hero card (hidden on mobile) -->
+    <div id="desktop-hero" class="card">
+      <div class="stat-label">Current BG</div>
+      <div id="dh-body">
+        <div id="dh-left">
+          <div id="dh-val" class="stat-value">—</div>
+          <span class="dh-unit">mg/dL</span>
+        </div>
+        <div class="dh-divider"></div>
+        <div id="dh-meta">
+          <div class="dh-meta-item">
+            <div class="dh-meta-label">Change</div>
+            <div class="dh-meta-val" id="dh-delta">—</div>
+          </div>
+          <div class="dh-meta-item">
+            <div class="dh-meta-label">Trend</div>
+            <div class="dh-meta-val" id="dh-trend">—</div>
+          </div>
+          <div class="dh-meta-item">
+            <div class="dh-meta-label">Updated</div>
+            <div class="dh-meta-val dh-meta-age" id="dh-age">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop right panel (hidden on mobile) -->
+    <div id="desktop-right">
+      <div class="card" id="desktop-donut-card">
+        <div class="stat-label">Time in Range</div>
+        <div id="desktop-donut-wrap">
+          <canvas id="desktop-donut-canvas" width="160" height="160"></canvas>
+        </div>
+        <div id="desktop-tir-legend"></div>
+      </div>
+      <div class="card" id="desktop-alarms-widget" onclick="openAlarmsFlyout()">
+        <div class="desktop-widget-header">
+          <div class="stat-label" style="margin:0;">Alarms</div>
+          <span class="desktop-view-all">View all &rsaquo;</span>
+        </div>
+        <div id="desktop-alarms-rows"></div>
+      </div>
+      <div class="card" id="desktop-health-card">
+        <div class="stat-label">Health</div>
+        <div class="desktop-health-row">
+          <span class="desktop-health-dot" id="dh-dexcom-dot"></span>
+          <span class="desktop-health-name">Dexcom API</span>
+          <span class="desktop-health-status" id="dh-dexcom-status"></span>
+        </div>
+        <div class="desktop-health-sub" id="dh-dexcom-sub"></div>
+        <div class="desktop-health-divider"></div>
+        <div class="desktop-health-row">
+          <span class="desktop-health-dot" id="dh-watchdog-dot"></span>
+          <span class="desktop-health-name">Watchdog</span>
+          <span class="desktop-health-status" id="dh-watchdog-status"></span>
+        </div>
+        <div class="desktop-health-sub" id="dh-watchdog-sub"></div>
+      </div>
+    </div>
+
     <div id="mobile-hero">
       <div class="mobile-hero-cols">
         <div class="mobile-hero-col">
@@ -692,7 +932,9 @@
       localStorage.setItem('dexmon-theme', dark ? 'dark' : 'light');
       applyTheme();
       if (chart) { chart.destroy(); chart = null; }
+      if (desktopDonut) { desktopDonut.destroy(); desktopDonut = null; }
       if (lastData) renderChart(lastData.readings || []);
+      if (lastData) renderDesktopWidgets(lastData);
     }
     applyTheme();
 
@@ -740,6 +982,8 @@
       document.getElementById('wsel-label').textContent = w;
       const hLabel = document.getElementById('header-wsel-label');
       if (hLabel) hLabel.textContent = w;
+      const dLabel = document.getElementById('desktop-wsel-label');
+      if (dLabel) dLabel.textContent = w;
       document.querySelectorAll('.wsel-item').forEach(b => {
         b.classList.toggle('active', b.dataset.window === w);
       });
@@ -753,17 +997,25 @@
       document.getElementById('header-window-select').classList.toggle('open');
     }
 
+    function toggleDesktopWindowSelect() {
+      document.getElementById('desktop-wsel-wrap').classList.toggle('open');
+    }
+
     document.addEventListener('click', function(e) {
       const ws  = document.getElementById('window-select');
       const hws = document.getElementById('header-window-select');
+      const dws = document.getElementById('desktop-wsel-wrap');
       if (ws  && !ws.contains(e.target))  ws.classList.remove('open');
       if (hws && !hws.contains(e.target)) hws.classList.remove('open');
+      if (dws && !dws.contains(e.target)) dws.classList.remove('open');
     });
 
     function setWindow(w) {
       document.getElementById('window-select').classList.remove('open');
       const hws = document.getElementById('header-window-select');
       if (hws) hws.classList.remove('open');
+      const dws = document.getElementById('desktop-wsel-wrap');
+      if (dws) dws.classList.remove('open');
       currentWindow = w;
       localStorage.setItem('dexmon-window', w);
       if (chart) { chart.destroy(); chart = null; }
@@ -1117,6 +1369,235 @@
       document.getElementById('val-q1').textContent     = d.stats?.q1     || '—';
       document.getElementById('val-median').textContent = d.stats?.median  || '—';
       document.getElementById('val-q3').textContent     = d.stats?.q3      || '—';
+
+      renderDesktopWidgets(d);
+    }
+
+    // ── Desktop widgets ────────────────────────────────────────────────────
+    let desktopDonut = null;
+
+    function renderDesktopWidgets(d) {
+      if (window.matchMedia('(max-width: 640px)').matches) return;
+      const cur = d.current, prev = d.previous;
+
+      // Hero card
+      const dhVal = document.getElementById('dh-val');
+      if (dhVal) {
+        dhVal.textContent = cur ? cur.value : '—';
+        dhVal.className = 'stat-value' + (cur ? ' ' + bgClass(cur.value) : '');
+      }
+      const dhDelta = document.getElementById('dh-delta');
+      if (dhDelta) {
+        if (cur && prev) {
+          const delta = cur.value - prev.value;
+          dhDelta.textContent = (delta >= 0 ? '+' : '') + delta;
+          dhDelta.className = 'dh-meta-val ' + bgClass(cur.value);
+        } else {
+          dhDelta.textContent = '—';
+          dhDelta.className = 'dh-meta-val';
+        }
+      }
+      const dhTrend = document.getElementById('dh-trend');
+      if (dhTrend) dhTrend.textContent = cur ? (TREND_ARROW[cur.trend] || '—') : '—';
+      const dhAge = document.getElementById('dh-age');
+      if (dhAge) dhAge.textContent = cur ? timeAgo(cur.recorded_at) : '—';
+
+      renderDesktopDonut(d);
+      renderDesktopAlarms(d);
+      renderDesktopHealth(d);
+    }
+
+    function renderDesktopDonut(d) {
+      const canvas = document.getElementById('desktop-donut-canvas');
+      if (!canvas) return;
+      const stats = d.stats || {};
+      const tbr = stats.time_below_range ?? 0;
+      const tir = stats.time_in_range ?? 0;
+      const tar = stats.time_above_range ?? 0;
+      const data = [tbr, tir, tar];
+      const colors = [cssVar('--low'), cssVar('--normal'), cssVar('--high')];
+
+      if (desktopDonut) {
+        desktopDonut.data.datasets[0].data = data;
+        desktopDonut.update('none');
+      } else {
+        desktopDonut = new Chart(canvas.getContext('2d'), {
+          type: 'doughnut',
+          data: { datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 0 }] },
+          options: {
+            cutout: '68%',
+            responsive: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: false,
+          },
+          plugins: [{
+            id: 'centerText',
+            afterDraw(ch) {
+              const { ctx, chartArea: { width, height, left, top } } = ch;
+              ctx.save();
+              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              const cx = left + width / 2, cy = top + height / 2;
+              ctx.font = 'bold 20px system-ui,sans-serif';
+              ctx.fillStyle = tir >= 70 ? cssVar('--normal') : tir >= 54 ? cssVar('--high') : cssVar('--low');
+              ctx.fillText(tir + '%', cx, cy - 8);
+              ctx.font = '9px system-ui,sans-serif';
+              ctx.fillStyle = cssVar('--text-muted');
+              ctx.fillText('in range', cx, cy + 10);
+              ctx.restore();
+            },
+          }],
+        });
+      }
+
+      const legend = document.getElementById('desktop-tir-legend');
+      if (legend) {
+        const rows = [
+          { label: 'Below range', pct: tbr, color: cssVar('--low') },
+          { label: 'In range',    pct: tir, color: tir >= 70 ? cssVar('--normal') : tir >= 54 ? cssVar('--high') : cssVar('--low') },
+          { label: 'Above range', pct: tar, color: tar <= 25 ? cssVar('--normal') : tar <= 36 ? cssVar('--high') : cssVar('--low') },
+        ];
+        legend.innerHTML = rows.map(r =>
+          `<div class="desktop-tir-row">
+            <span class="desktop-tir-swatch" style="background:${r.color}"></span>
+            <span class="desktop-tir-name">${r.label}</span>
+            <span class="desktop-tir-pct" style="color:${r.color}">${r.pct}%</span>
+          </div>`
+        ).join('');
+      }
+    }
+
+    function renderDesktopAlarms(d) {
+      const container = document.getElementById('desktop-alarms-rows');
+      if (!container) return;
+      const alarms = (d.alarms || []).slice(0, 3);
+      if (!alarms.length) {
+        container.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">No alarms configured</div>';
+        return;
+      }
+      const dotColor  = s => s === 'active' ? 'var(--low)' : 'var(--text-muted)';
+      const badgeHTML = s => {
+        const label = { active: 'Active', snoozed_until: 'Snoozed', fired: 'OK', never_fired: 'OK' }[s] || s;
+        const cls = s === 'active' ? 'badge-active' : '';
+        return `<span class="badge ${cls}">${label}</span>`;
+      };
+      container.innerHTML = alarms.map((a, i) =>
+        `${i > 0 ? '<div class="desktop-alarm-divider"></div>' : ''}
+         <div class="desktop-alarm-row">
+           <div class="desktop-alarm-dot" style="background:${dotColor(a.status)}"></div>
+           <span class="desktop-alarm-name" style="color:${a.status === 'active' ? 'var(--text)' : 'var(--text-muted)'}">${esc(a.name)}</span>
+           ${badgeHTML(a.status)}
+         </div>`
+      ).join('');
+    }
+
+    function openAlarmsFlyout() {
+      document.getElementById('alarms-overlay').classList.add('open');
+      document.getElementById('alarms-flyout').classList.add('open');
+      if (lastData) populateAlarmsFlyout(lastData);
+    }
+    function closeAlarmsFlyout() {
+      document.getElementById('alarms-overlay').classList.remove('open');
+      document.getElementById('alarms-flyout').classList.remove('open');
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeAlarmsFlyout();
+    });
+
+    function populateAlarmsFlyout(d) {
+      const tbody = document.getElementById('flyout-alarm-rows');
+      if (tbody) {
+        const alarms = d.alarms || [];
+        tbody.innerHTML = alarms.map(a => {
+          const fired = a.last_fired_at ? timeAgo(a.last_fired_at) : '—';
+          const statusLabel = { active: 'Active', snoozed_until: 'Snoozed', fired: 'OK', never_fired: '—' }[a.status] || a.status;
+          const statusStyle = a.status === 'active' ? 'color:var(--low);font-weight:600;' : 'color:var(--text-muted);';
+          const priCls = { emergency: 'badge-emergency', high: 'badge-high' }[a.priority] || 'badge-normal';
+          return `<tr>
+            <td>${esc(a.name)}</td>
+            <td><span class="badge ${priCls}">${esc(a.priority)}</span></td>
+            <td style="color:var(--text-muted)">${fired}</td>
+            <td style="${statusStyle}">${statusLabel}</td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="4" class="text-muted">No alarms</td></tr>';
+      }
+      const hbody = document.getElementById('flyout-history-rows');
+      if (hbody) {
+        const history = d.alarm_history || [];
+        const tLow = lastData?.target?.low ?? 70, tHigh = lastData?.target?.high ?? 180;
+        hbody.innerHTML = history.slice(0, 20).map(h => {
+          const col = h.bg_value < tLow ? 'var(--low)' : h.bg_value > tHigh ? 'var(--high)' : 'var(--normal)';
+          return `<tr>
+            <td>${esc(h.alarm_name)}</td>
+            <td style="color:${col}">${h.bg_value}</td>
+            <td style="color:var(--text-muted)">${fmtTime(h.fired_at)}</td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="3" class="text-muted">No history</td></tr>';
+      }
+    }
+
+    function renderDesktopHealth(d) {
+      const dexcomDot    = document.getElementById('dh-dexcom-dot');
+      const dexcomStatus = document.getElementById('dh-dexcom-status');
+      const dexcomSub    = document.getElementById('dh-dexcom-sub');
+      if (dexcomDot && dexcomStatus) {
+        const cur = d.current;
+        if (!cur) {
+          dexcomDot.style.background = 'var(--low)';
+          dexcomStatus.textContent = 'Error';
+          dexcomStatus.style.color = 'var(--low)';
+          if (dexcomSub) dexcomSub.textContent = 'No readings';
+        } else {
+          const ageMin = (Date.now() - new Date(cur.recorded_at).getTime()) / 60000;
+          if (ageMin < 10) {
+            dexcomDot.style.background = 'var(--normal)';
+            dexcomStatus.textContent = 'OK';
+            dexcomStatus.style.color = 'var(--normal)';
+          } else if (ageMin < 30) {
+            dexcomDot.style.background = 'var(--high)';
+            dexcomStatus.textContent = 'Delayed';
+            dexcomStatus.style.color = 'var(--high)';
+          } else {
+            dexcomDot.style.background = 'var(--low)';
+            dexcomStatus.textContent = 'Error';
+            dexcomStatus.style.color = 'var(--low)';
+          }
+          if (dexcomSub) dexcomSub.textContent = 'Last reading ' + timeAgo(cur.recorded_at);
+        }
+      }
+
+      const wdDot    = document.getElementById('dh-watchdog-dot');
+      const wdStatus = document.getElementById('dh-watchdog-status');
+      const wdSub    = document.getElementById('dh-watchdog-sub');
+      const health   = d.health;
+      if (wdDot && wdStatus) {
+        if (!health?.watchdog?.configured) {
+          wdDot.style.background = 'var(--text-muted)';
+          wdStatus.textContent = '—';
+          wdStatus.style.color = 'var(--text-muted)';
+          if (wdSub) wdSub.textContent = 'Not configured';
+        } else if (!health.watchdog.last_ping_at) {
+          wdDot.style.background = 'var(--text-muted)';
+          wdStatus.textContent = 'Pending';
+          wdStatus.style.color = 'var(--text-muted)';
+          if (wdSub) wdSub.textContent = 'No ping recorded yet';
+        } else {
+          const pingMin = (Date.now() - new Date(health.watchdog.last_ping_at).getTime()) / 60000;
+          if (pingMin < 10) {
+            wdDot.style.background = 'var(--normal)';
+            wdStatus.textContent = 'OK';
+            wdStatus.style.color = 'var(--normal)';
+          } else if (pingMin < 30) {
+            wdDot.style.background = 'var(--high)';
+            wdStatus.textContent = 'Delayed';
+            wdStatus.style.color = 'var(--high)';
+          } else {
+            wdDot.style.background = 'var(--low)';
+            wdStatus.textContent = 'Error';
+            wdStatus.style.color = 'var(--low)';
+          }
+          if (wdSub) wdSub.textContent = 'Last ping ' + timeAgo(health.watchdog.last_ping_at);
+        }
+      }
     }
 
     function renderDistributionStrip(d) {
@@ -1386,6 +1867,7 @@
               },
             },
             y: {
+              position: 'right',
               suggestedMin: 40,
               grid: { color: cssVar('--grid') },
               ticks: { color: cssVar('--text-muted') },
@@ -1494,5 +1976,30 @@
     setInterval(fetchAndRender, REFRESH_MS);
     setInterval(updateLastUpdated, 60 * 1000);
   </script>
+
+  <!-- Alarms flyout (desktop only) -->
+  <div id="alarms-overlay" class="alarms-overlay" onclick="closeAlarmsFlyout()"></div>
+  <div id="alarms-flyout" class="alarms-flyout">
+    <div class="alarms-flyout-header">
+      <span class="alarms-flyout-title">Alarms</span>
+      <button class="alarms-flyout-close" onclick="closeAlarmsFlyout()">✕</button>
+    </div>
+    <div class="alarms-flyout-body">
+      <div class="alarms-flyout-section">
+        <div class="alarms-flyout-section-title">Current Status</div>
+        <table class="alarms-table">
+          <thead><tr><th>Alarm</th><th>Priority</th><th>Last Fired</th><th>Status</th></tr></thead>
+          <tbody id="flyout-alarm-rows"></tbody>
+        </table>
+      </div>
+      <div class="alarms-flyout-section">
+        <div class="alarms-flyout-section-title">Recent History</div>
+        <table class="alarms-table">
+          <thead><tr><th>Alarm</th><th>BG</th><th>Time</th></tr></thead>
+          <tbody id="flyout-history-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

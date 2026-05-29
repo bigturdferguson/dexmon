@@ -99,6 +99,9 @@ func (p *Poller) Tick() {
 
 	if url := p.healthCfg.Watchdog.PingURL; url != "" {
 		health.PingWatchdog(url)
+		if err := p.store.SetMeta("last_watchdog_ping", now.Format(time.RFC3339)); err != nil {
+			log.Printf("[%s] set last_watchdog_ping: %v", p.accountName, err)
+		}
 	}
 
 	toFire, toRearm, err := evaluator.Evaluate(p.accountName, p.cfg.Alarms, *reading, p.store, now)

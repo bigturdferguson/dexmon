@@ -18,9 +18,9 @@ type Server struct {
 	mux   *http.ServeMux
 }
 
-func New(st *store.Store, port int, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int) *Server {
+func New(st *store.Store, port int, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int, watchdogURL string) *Server {
 	s := &Server{store: st, port: port, mux: http.NewServeMux()}
-	dash := dashboard.New(st, account, alarms, recipients, targetLow, targetHigh)
+	dash := dashboard.New(st, account, alarms, recipients, targetLow, targetHigh, watchdogURL)
 	s.mux.Handle("GET /", dash)
 	s.mux.Handle("GET /api/dashboard", dash)
 	s.mux.HandleFunc("POST /pushover/callback", s.handleCallback)

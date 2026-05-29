@@ -470,3 +470,37 @@ func TestGetAlarmHistory_DeduplicatesMultiRecipient(t *testing.T) {
 		t.Errorf("BGValue: got %d, want 68", entries[0].BGValue)
 	}
 }
+
+func TestSetMeta_GetMeta(t *testing.T) {
+	s := newTestStore(t)
+
+	_, ok, err := s.GetMeta("foo")
+	if err != nil {
+		t.Fatalf("GetMeta empty: %v", err)
+	}
+	if ok {
+		t.Error("expected not found before set")
+	}
+
+	if err := s.SetMeta("foo", "bar"); err != nil {
+		t.Fatalf("SetMeta: %v", err)
+	}
+	val, ok, err := s.GetMeta("foo")
+	if err != nil {
+		t.Fatalf("GetMeta after set: %v", err)
+	}
+	if !ok {
+		t.Error("expected found after set")
+	}
+	if val != "bar" {
+		t.Errorf("got %q want %q", val, "bar")
+	}
+
+	if err := s.SetMeta("foo", "baz"); err != nil {
+		t.Fatalf("SetMeta upsert: %v", err)
+	}
+	val, _, _ = s.GetMeta("foo")
+	if val != "baz" {
+		t.Errorf("upsert: got %q want %q", val, "baz")
+	}
+}

@@ -61,7 +61,7 @@ func main() {
 		break
 	}
 
-	srv := callback.New(st, cfg.Server.CallbackPort, accountName, accountAlarms, cfg.Recipients, targetLow, targetHigh)
+	srv := callback.New(st, cfg.Server.CallbackPort, accountName, accountAlarms, cfg.Recipients, targetLow, targetHigh, cfg.Health.Watchdog.PingURL)
 	if err := srv.Start(); err != nil {
 		st.Close()
 		log.Fatal(err)
