@@ -92,7 +92,11 @@ func (d *Dispatcher) Send(req SendRequest, now time.Time) error {
 	}
 
 	if result.Receipt != "" {
-		log.Printf("[%s] alarm %q fired → %s (%s, receipt %s)", req.Account, req.AlarmName, req.Recipient, req.Alarm.Priority, result.Receipt)
+		receiptShort := result.Receipt
+		if len(receiptShort) > 8 {
+			receiptShort = receiptShort[:8] + "…"
+		}
+		log.Printf("[%s] alarm %q fired → %s (%s, receipt %s)", req.Account, req.AlarmName, req.Recipient, req.Alarm.Priority, receiptShort)
 	} else {
 		log.Printf("[%s] alarm %q fired → %s (%s)", req.Account, req.AlarmName, req.Recipient, req.Alarm.Priority)
 	}
