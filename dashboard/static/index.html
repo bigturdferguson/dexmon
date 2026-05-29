@@ -971,16 +971,31 @@
       return sampled;
     }
 
+    const SHORT_WINDOWS = new Set(['1h', '3h', '6h', '12h', '24h']);
+
     function prepareChartData(readings, w) {
-      if (w === '12h' || readings.length <= 200) return readings;
+      if (SHORT_WINDOWS.has(w) || readings.length <= 200) return readings;
       return lttb(readings, 200);
+    }
+
+    function movingAverage(readings, windowPct) {
+      const k = Math.max(3, Math.round(readings.length * windowPct));
+      return readings.map((_, i) => {
+        const lo = Math.max(0, i - Math.floor(k / 2));
+        const hi = Math.min(readings.length, lo + k);
+        let sum = 0;
+        for (let j = lo; j < hi; j++) sum += readings[j].value;
+        return Math.round(sum / (hi - lo));
+      });
     }
 
     function renderChart(readings) {
       if (!readings.length) return;
       const displayReadings = prepareChartData(readings, currentWindow);
-      const showDots = currentWindow === '12h' || currentWindow === '24h';
-      const pointRadius = showDots ? (displayReadings.length > 100 ? 2 : 3) : 0;
+      const showDots    = currentWindow === '1h' || currentWindow === '3h';
+      const pointRadius = showDots ? (displayReadings.length > 60 ? 2 : 3) : 0;
+      const showTrend   = LONG_WINDOWS.has(currentWindow);
+      const trendData   = showTrend ? movingAverage(displayReadings, 0.12) : [];
 
       const labels    = buildLabels(displayReadings, currentWindow);
       const values    = displayReadings.map(r => r.value);
@@ -992,13 +1007,44 @@
         chart._rulerWindow   = currentWindow;
         chart._rulerReadings = displayReadings;
         chart._rawReadings   = readings;
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = values;
-        chart.data.datasets[0].pointBackgroundColor = ptColors;
-        chart.data.datasets[0].pointRadius = pointRadius;
-        chart.data.datasets[0].pointHoverRadius = 4;
-        chart.data.datasets[1].data = lowLine;
-        chart.data.datasets[2].data = highLine;
+        chart.data.labels    = labels;
+        chart.data.datasets  = [
+          {
+            data: values,
+            borderColor: '#6366f1',
+            borderWidth: 2,
+            pointBackgroundColor: ptColors,
+            pointRadius,
+            pointHoverRadius: 4,
+            tension: 0.3,
+            fill: false,
+          },
+          {
+            data: lowLine,
+            borderColor: cssVar('--low-line'),
+            borderWidth: 1,
+            borderDash: [5, 4],
+            pointRadius: 0,
+            fill: '+1',
+            backgroundColor: 'rgba(22,163,74,0.08)',
+          },
+          {
+            data: highLine,
+            borderColor: cssVar('--high-line'),
+            borderWidth: 1,
+            borderDash: [5, 4],
+            pointRadius: 0,
+            fill: false,
+          },
+          ...(showTrend ? [{
+            data: trendData,
+            borderColor: 'rgba(99,102,241,0.5)',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            tension: 0.4,
+            fill: false,
+          }] : []),
+        ];
         chart.update('none');
         return;
       }
@@ -1037,6 +1083,14 @@
               pointRadius: 0,
               fill: false,
             },
+            ...(showTrend ? [{
+              data: trendData,
+              borderColor: 'rgba(99,102,241,0.5)',
+              borderWidth: 2.5,
+              pointRadius: 0,
+              tension: 0.4,
+              fill: false,
+            }] : []),
           ],
         },
         options: {
