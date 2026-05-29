@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         media="(max-width: 640px)" rel="stylesheet">
@@ -233,7 +233,7 @@
       #stat-cv .stat-sub,
       .stat-tir .stat-sub,
       .stat-tir .tir-bar-wrap { display: none; }
-      /* Tab bar: fixed at bottom */
+      /* Tab bar: fixed at bottom, extends into safe area */
       .tab-bar {
         position: fixed;
         bottom: 0;
@@ -244,9 +244,10 @@
         border: none;
         border-top: 1px solid var(--border);
         margin-bottom: 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
       }
-      /* Clear fixed tab bar */
-      main { padding-bottom: 56px; }
+      /* Clear fixed tab bar + safe area */
+      main { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
       /* Hide chart + distribution strip when alarms tab is active */
       main.tab-alarms-active > .card,
       main.tab-alarms-active #distribution-strip { display: none; }
