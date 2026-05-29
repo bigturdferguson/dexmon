@@ -256,3 +256,23 @@ func TestCallback_SkipsVerificationWhenAppTokenEmpty(t *testing.T) {
 		t.Fatalf("expected 200 when app token not configured, got %d", w.Code)
 	}
 }
+
+func TestCallback_SecurityHeaders(t *testing.T) {
+	st := newTestStore(t)
+	srv := callback.New(st, 0, "", nil, nil, 70, 180, "", "")
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	headers := []struct{ name, want string }{
+		{"X-Content-Type-Options", "nosniff"},
+		{"X-Frame-Options", "DENY"},
+		{"Content-Security-Policy", "default-src 'self'"},
+	}
+	for _, h := range headers {
+		got := w.Header().Get(h.name)
+		if !strings.Contains(got, h.want) {
+			t.Errorf("header %s: got %q, want to contain %q", h.name, got, h.want)
+		}
+	}
+}
