@@ -234,7 +234,8 @@
       .stat-tir .stat-sub,
       .stat-tir .tir-bar-wrap { display: none; }
       /* Tab bar: fixed at bottom, extends into safe area */
-      .tab-bar {
+      /* body prefix lifts specificity above desktop .tab-bar rule that follows media query */
+      body .tab-bar {
         position: fixed;
         bottom: 0;
         left: 0;
@@ -244,6 +245,8 @@
         border: none;
         border-top: 1px solid var(--border);
         margin-bottom: 0;
+        overflow: visible;
+        box-shadow: none;
         padding-bottom: env(safe-area-inset-bottom, 0px);
       }
       /* Clear fixed tab bar + safe area */
@@ -527,11 +530,6 @@
       <div class="dist-axis"></div>
     </div>
 
-    <div class="tab-bar">
-      <button class="tab-btn" data-tab="stats" onclick="setTab('stats')">Stats</button>
-      <button class="tab-btn" data-tab="alarms" onclick="setTab('alarms')">Alarms</button>
-    </div>
-
     <div id="tab-stats" class="tab-panel">
       <div class="stats-grid">
         <div class="stat-card stat-current stat-mobile-hide">
@@ -642,6 +640,11 @@
       </div>
     </div>
   </main>
+
+  <div class="tab-bar">
+    <button class="tab-btn" data-tab="stats" onclick="setTab('stats')">Stats</button>
+    <button class="tab-btn" data-tab="alarms" onclick="setTab('alarms')">Alarms</button>
+  </div>
 
   <script>
     const REFRESH_MS = 5 * 60 * 1000;
