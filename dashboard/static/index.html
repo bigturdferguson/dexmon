@@ -135,14 +135,13 @@
         border-radius: 0.75rem; box-shadow: var(--shadow);
         padding: 0.6rem 0.75rem 0.5rem;
         margin-bottom: 0.75rem;
+        overflow: hidden;
       }
       .dist-label {
         font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
         letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.5rem;
       }
       .dist-strip-wrap { position: relative; height: 54px; }
-      .dist-axis { display: flex; justify-content: space-between; margin-top: 2px; }
-      .dist-axis span { font-size: 0.6875rem; color: var(--text-muted); }
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
@@ -452,8 +451,8 @@
     .tir-val-row { display: flex; align-items: center; gap: 0.75rem; }
     .tir-bar-wrap { flex: 1; background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
     .tir-bar { height: 100%; border-radius: 99px; background: var(--normal); width: 0%; transition: width 0.3s; }
-    .dist-strip-wrap { position: relative; height: 35px; overflow: visible; }
-    .dist-axis { display: flex; justify-content: space-between; margin-top: 2px; }
+    .dist-strip-wrap { position: relative; height: 54px; overflow: visible; }
+    .dist-axis { display: flex; justify-content: space-between; margin-top: 10px; }
     .dist-axis span { font-size: 0.6875rem; color: var(--text-muted); }
     .quartile-row { display: flex; justify-content: space-around; margin-top: 0.4rem; align-items: center; }
     .quartile-cell { text-align: center; }
