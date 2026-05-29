@@ -64,6 +64,7 @@
     #header-window-select { display: none; }
     .chart-title-mobile { display: none; }
     #mobile-hero { display: none; }
+    #distribution-strip { display: none; }
     #theme-btn {
       background: none;
       border: 1px solid var(--border);
@@ -120,6 +121,22 @@
         width: 1px; background: var(--border);
         margin: 0.15rem 0.1rem; align-self: stretch;
       }
+      #distribution-strip {
+        display: block;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 0.75rem; box-shadow: var(--shadow);
+        padding: 0.6rem 0.75rem 0.5rem;
+        margin-bottom: 0.75rem;
+      }
+      .dist-label {
+        font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.5rem;
+      }
+      .dist-strip-wrap { position: relative; height: 42px; }
+      .dist-axis {
+        display: flex; justify-content: space-between; margin-top: 2px;
+      }
+      .dist-axis span { font-size: 0.6875rem; color: var(--text-muted); }
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-current { grid-column: 1 / -1; }
       .stat-mobile-hide { display: none; }
@@ -501,6 +518,14 @@
         </div>
       </div>
       <div class="chart-wrap"><canvas id="bg-chart"></canvas></div>
+    </div>
+
+    <div id="distribution-strip">
+      <div class="dist-label">Distribution</div>
+      <div class="dist-strip-wrap" id="dist-strip-inner"></div>
+      <div class="dist-axis">
+        <span>40</span><span>70</span><span>130</span><span>180</span><span>260</span>
+      </div>
     </div>
 
     <div class="tab-bar">
@@ -1044,6 +1069,64 @@
       document.getElementById('val-q3').textContent     = d.stats?.q3      || '—';
     }
 
+    const BG_STRIP_MIN = 40, BG_STRIP_MAX = 260;
+
+    function renderDistributionStrip(d) {
+      const wrap = document.getElementById('dist-strip-inner');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+
+      const q1  = d.stats?.q1,  med = d.stats?.median, q3 = d.stats?.q3;
+      const low = d.target?.low, high = d.target?.high;
+      if (!q1 || !med || !q3) return;
+
+      const range = BG_STRIP_MAX - BG_STRIP_MIN;
+      const pct  = v => ((v - BG_STRIP_MIN) / range * 100).toFixed(2) + '%';
+      const wPct = (a, b) => ((b - a) / range * 100).toFixed(2) + '%';
+
+      // Target zone background
+      if (low && high) {
+        const tz = document.createElement('div');
+        tz.style.cssText = `position:absolute;left:${pct(low)};width:${wPct(low,high)};` +
+          `top:14px;height:14px;background:rgba(22,163,74,0.1);` +
+          `border:1px solid rgba(22,163,74,0.25);border-radius:3px;`;
+        wrap.appendChild(tz);
+      }
+
+      // Track
+      const track = document.createElement('div');
+      track.style.cssText = 'position:absolute;left:0;right:0;top:19px;height:4px;' +
+        'background:rgba(0,0,0,0.2);border-radius:2px;';
+      wrap.appendChild(track);
+
+      // IQR gradient fill
+      const fill = document.createElement('div');
+      fill.style.cssText = `position:absolute;left:${pct(q1)};width:${wPct(q1,q3)};` +
+        `top:19px;height:4px;border-radius:2px;` +
+        `background:linear-gradient(to right,rgba(99,102,241,0.5),rgba(99,102,241,0.9));`;
+      wrap.appendChild(fill);
+
+      // Median line
+      const medEl = document.createElement('div');
+      medEl.style.cssText = `position:absolute;left:${pct(med)};top:13px;` +
+        `width:2px;height:16px;background:var(--text);border-radius:1px;transform:translateX(-1px);`;
+      wrap.appendChild(medEl);
+
+      // Q labels: value above track, name below track
+      [[q1,'Q1','var(--text-muted)'],[med,'Med','var(--text)'],[q3,'Q3','var(--text-muted)']].forEach(([v,lbl,col])=>{
+        const vEl = document.createElement('div');
+        vEl.style.cssText = `position:absolute;left:${pct(v)};top:0;` +
+          `transform:translateX(-50%);font-size:0.6875rem;font-weight:700;color:${col};white-space:nowrap;`;
+        vEl.textContent = v;
+        wrap.appendChild(vEl);
+        const lEl = document.createElement('div');
+        lEl.style.cssText = `position:absolute;left:${pct(v)};top:30px;` +
+          `transform:translateX(-50%);font-size:0.6rem;color:var(--text-muted);white-space:nowrap;`;
+        lEl.textContent = lbl;
+        wrap.appendChild(lEl);
+      });
+    }
+
     function lttb(data, threshold) {
       const len = data.length;
       if (threshold >= len || threshold <= 2) return data;
@@ -1321,6 +1404,7 @@
         lastData = d;
         lastAsOf = d.as_of;
         renderWidgets(d);
+        renderDistributionStrip(d);
         renderChart(d.readings || []);
         renderAlarms(d.alarms || []);
         renderAlarmHistory(d.alarm_history || []);
