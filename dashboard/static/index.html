@@ -530,11 +530,6 @@
       <div class="dist-axis"></div>
     </div>
 
-    <div class="tab-bar">
-      <button class="tab-btn" data-tab="stats" onclick="setTab('stats')">Stats</button>
-      <button class="tab-btn" data-tab="alarms" onclick="setTab('alarms')">Alarms</button>
-    </div>
-
     <div id="tab-stats" class="tab-panel">
       <div class="stats-grid">
         <div class="stat-card stat-current stat-mobile-hide">
@@ -645,6 +640,11 @@
       </div>
     </div>
   </main>
+
+  <div class="tab-bar">
+    <button class="tab-btn" data-tab="stats" onclick="setTab('stats')">Stats</button>
+    <button class="tab-btn" data-tab="alarms" onclick="setTab('alarms')">Alarms</button>
+  </div>
 
   <script>
     const REFRESH_MS = 5 * 60 * 1000;
