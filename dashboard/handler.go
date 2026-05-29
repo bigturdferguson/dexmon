@@ -173,6 +173,12 @@ func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request, path, cont
 
 func windowDuration(s string) (string, time.Duration) {
 	switch s {
+	case "1h":
+		return "1h", 1 * time.Hour
+	case "3h":
+		return "3h", 3 * time.Hour
+	case "6h":
+		return "6h", 6 * time.Hour
 	case "12h":
 		return "12h", 12 * time.Hour
 	case "7d":
