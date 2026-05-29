@@ -16,6 +16,10 @@ primary_region = 'dfw'
   min_machines_running = 0
   processes = ['app']
 
+[[mounts]]
+  source = "dexmon_data"
+  destination = "/data"
+
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'
