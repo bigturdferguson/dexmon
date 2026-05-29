@@ -33,7 +33,7 @@ func get(t *testing.T, h http.Handler, path string) *httptest.ResponseRecorder {
 
 func TestDashboardAPI_EmptyData(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	if w.Code != http.StatusOK {
@@ -85,7 +85,7 @@ func TestDashboardAPI_PopulatedData(t *testing.T) {
 		}
 	}
 
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -115,7 +115,7 @@ func TestDashboardAPI_AlarmStatus_NeverFired(t *testing.T) {
 	alarms := []config.AlarmConfig{{Name: "Low", Priority: "high", Recipients: []string{"brandon"}}}
 	recipients := map[string]config.RecipientConfig{"brandon": {PushoverUserKey: "key"}}
 
-	h := dashboard.New(s, "noah", alarms, recipients, 70, 180)
+	h := dashboard.New(s, "noah", alarms, recipients, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -149,7 +149,7 @@ func TestDashboardAPI_AlarmStatus_Active(t *testing.T) {
 	})
 
 	alarms := []config.AlarmConfig{{Name: "Urgent Low", Priority: "emergency", Recipients: []string{"brandon"}}}
-	h := dashboard.New(s, "noah", alarms, nil, 70, 180)
+	h := dashboard.New(s, "noah", alarms, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -178,7 +178,7 @@ func TestDashboardAPI_AlarmStatus_SnoozedUntil(t *testing.T) {
 	})
 
 	alarms := []config.AlarmConfig{{Name: "High", Priority: "high", Recipients: []string{"brandon"}}}
-	h := dashboard.New(s, "noah", alarms, nil, 70, 180)
+	h := dashboard.New(s, "noah", alarms, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -205,7 +205,7 @@ func TestDashboardAPI_AlarmStatus_Fired(t *testing.T) {
 	})
 
 	alarms := []config.AlarmConfig{{Name: "Low", Priority: "high", Recipients: []string{"brandon"}}}
-	h := dashboard.New(s, "noah", alarms, nil, 70, 180)
+	h := dashboard.New(s, "noah", alarms, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -239,7 +239,7 @@ func TestDashboardAPI_MultiRecipient_MostConcerningStatusWins(t *testing.T) {
 	alarms := []config.AlarmConfig{
 		{Name: "Low", Priority: "emergency", Recipients: []string{"alice", "brandon"}},
 	}
-	h := dashboard.New(s, "noah", alarms, nil, 70, 180)
+	h := dashboard.New(s, "noah", alarms, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -254,7 +254,7 @@ func TestDashboardAPI_MultiRecipient_MostConcerningStatusWins(t *testing.T) {
 
 func TestDashboardIndex_ServesHTML(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/")
 
 	if w.Code != http.StatusOK {
@@ -267,7 +267,7 @@ func TestDashboardIndex_ServesHTML(t *testing.T) {
 
 func TestDashboardAPI_TargetRange(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 80, 140)
+	h := dashboard.New(s, "noah", nil, nil, 80, 140, "")
 	w := get(t, h, "/api/dashboard")
 
 	if w.Code != http.StatusOK {
@@ -288,7 +288,7 @@ func TestDashboardAPI_TargetRange(t *testing.T) {
 
 func TestDashboardAPI_WindowDefault(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	if w.Code != http.StatusOK {
@@ -305,7 +305,7 @@ func TestDashboardAPI_WindowDefault(t *testing.T) {
 
 func TestDashboardAPI_Window7d(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard?window=7d")
 
 	if w.Code != http.StatusOK {
@@ -322,7 +322,7 @@ func TestDashboardAPI_Window7d(t *testing.T) {
 
 func TestDashboardAPI_WindowInvalidFallsBack(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard?window=bogus")
 
 	if w.Code != http.StatusOK {
@@ -339,7 +339,7 @@ func TestDashboardAPI_WindowInvalidFallsBack(t *testing.T) {
 
 func TestDashboardAPI_Window12h(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard?window=12h")
 
 	if w.Code != http.StatusOK {
@@ -356,7 +356,7 @@ func TestDashboardAPI_Window12h(t *testing.T) {
 
 func TestDashboardAPI_Window30d(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard?window=30d")
 
 	if w.Code != http.StatusOK {
@@ -394,7 +394,7 @@ func TestDashboardAPI_Window12h_FiltersOldReadings(t *testing.T) {
 		t.Fatalf("save recent reading: %v", err)
 	}
 
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard?window=12h")
 
 	if w.Code != http.StatusOK {
@@ -436,7 +436,7 @@ func TestDashboardAPI_AlarmHistory_InWindow(t *testing.T) {
 		t.Fatalf("LogAlarmFired (out of window): %v", err)
 	}
 
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard?window=24h")
 
 	var resp dashboard.DashboardResponse
@@ -456,7 +456,7 @@ func TestDashboardAPI_AlarmHistory_InWindow(t *testing.T) {
 
 func TestDashboardAPI_AlarmHistory_EmptyForNoFirings(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	var resp dashboard.DashboardResponse
@@ -473,7 +473,7 @@ func TestDashboardAPI_AlarmHistory_EmptyForNoFirings(t *testing.T) {
 
 func TestDashboardAPI_Window90d(t *testing.T) {
 	s := newTestStore(t)
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard?window=90d")
 
 	if w.Code != http.StatusOK {
@@ -505,7 +505,7 @@ func TestDashboardAPI_TimeBelowAboveRange(t *testing.T) {
 		}
 	}
 
-	h := dashboard.New(s, "noah", nil, nil, 70, 180)
+	h := dashboard.New(s, "noah", nil, nil, 70, 180, "")
 	w := get(t, h, "/api/dashboard")
 
 	body := w.Body.Bytes()

@@ -33,6 +33,7 @@ type DashboardResponse struct {
 	Readings     []ReadingJSON      `json:"readings"`
 	Alarms       []AlarmJSON        `json:"alarms"`
 	AlarmHistory []AlarmHistoryJSON `json:"alarm_history"`
+	Health       HealthJSON         `json:"health"`
 }
 
 type ReadingJSON struct {
@@ -42,15 +43,26 @@ type ReadingJSON struct {
 }
 
 type StatsJSON struct {
-	High        int     `json:"high"`
-	Low         int     `json:"low"`
-	Avg         int     `json:"avg"`
-	StdDev      int     `json:"std_dev"`
-	CV          float64 `json:"cv"`
-	TimeInRange float64 `json:"time_in_range"`
-	Q1          int     `json:"q1"`
-	Median      int     `json:"median"`
-	Q3          int     `json:"q3"`
+	High           int     `json:"high"`
+	Low            int     `json:"low"`
+	Avg            int     `json:"avg"`
+	StdDev         int     `json:"std_dev"`
+	CV             float64 `json:"cv"`
+	TimeInRange    float64 `json:"time_in_range"`
+	TimeBelowRange float64 `json:"time_below_range"`
+	TimeAboveRange float64 `json:"time_above_range"`
+	Q1             int     `json:"q1"`
+	Median         int     `json:"median"`
+	Q3             int     `json:"q3"`
+}
+
+type WatchdogHealthJSON struct {
+	Configured bool    `json:"configured"`
+	LastPingAt *string `json:"last_ping_at,omitempty"`
+}
+
+type HealthJSON struct {
+	Watchdog WatchdogHealthJSON `json:"watchdog"`
 }
 
 func computeStats(readings []types.Reading, targetLow, targetHigh int) StatsJSON {
@@ -61,7 +73,7 @@ func computeStats(readings []types.Reading, targetLow, targetHigh int) StatsJSON
 
 	var sum, sumSq float64
 	minVal, maxVal := readings[0].Value, readings[0].Value
-	inRange := 0
+	inRange, belowRange, aboveRange := 0, 0, 0
 	vals := make([]int, n)
 
 	for i, r := range readings {
@@ -78,6 +90,10 @@ func computeStats(readings []types.Reading, targetLow, targetHigh int) StatsJSON
 		}
 		if v >= targetLow && v <= targetHigh {
 			inRange++
+		} else if v < targetLow {
+			belowRange++
+		} else {
+			aboveRange++
 		}
 	}
 
@@ -94,6 +110,8 @@ func computeStats(readings []types.Reading, targetLow, targetHigh int) StatsJSON
 		cv = math.Round(stddev/mean*100*10) / 10
 	}
 	tir := math.Round(float64(inRange)/fn*100*10) / 10
+	tbr := math.Round(float64(belowRange)/fn*100*10) / 10
+	tar := math.Round(float64(aboveRange)/fn*100*10) / 10
 
 	sort.Ints(vals)
 	q1 := vals[int(float64(n-1)*0.25)]
@@ -101,15 +119,17 @@ func computeStats(readings []types.Reading, targetLow, targetHigh int) StatsJSON
 	q3 := vals[int(float64(n-1)*0.75)]
 
 	return StatsJSON{
-		High:        maxVal,
-		Low:         minVal,
-		Avg:         int(math.Round(mean)),
-		StdDev:      int(math.Round(stddev)),
-		CV:          cv,
-		TimeInRange: tir,
-		Q1:          q1,
-		Median:      median,
-		Q3:          q3,
+		High:           maxVal,
+		Low:            minVal,
+		Avg:            int(math.Round(mean)),
+		StdDev:         int(math.Round(stddev)),
+		CV:             cv,
+		TimeInRange:    tir,
+		TimeBelowRange: tbr,
+		TimeAboveRange: tar,
+		Q1:             q1,
+		Median:         median,
+		Q3:             q3,
 	}
 }
 
@@ -136,18 +156,19 @@ var statusRank = map[string]int{
 
 // Handler serves the dashboard HTML and JSON API.
 type Handler struct {
-	store      *store.Store
-	account    string
-	alarms     []config.AlarmConfig
-	recipients map[string]config.RecipientConfig // reserved for future recipient-name display
-	targetLow  int
-	targetHigh int
+	store        *store.Store
+	account      string
+	alarms       []config.AlarmConfig
+	recipients   map[string]config.RecipientConfig
+	targetLow    int
+	targetHigh   int
+	watchdogURL  string
 }
 
 // New constructs a Handler. Pass the single monitored account name and its
 // alarm configs so the API can return per-alarm status.
-func New(st *store.Store, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int) *Handler {
-	return &Handler{store: st, account: account, alarms: alarms, recipients: recipients, targetLow: targetLow, targetHigh: targetHigh}
+func New(st *store.Store, account string, alarms []config.AlarmConfig, recipients map[string]config.RecipientConfig, targetLow, targetHigh int, watchdogURL string) *Handler {
+	return &Handler{store: st, account: account, alarms: alarms, recipients: recipients, targetLow: targetLow, targetHigh: targetHigh, watchdogURL: watchdogURL}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -231,6 +252,16 @@ func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request) {
 		prev := readings[n-2]
 		resp.Previous = &ReadingJSON{Value: prev.Value, Trend: string(prev.Trend), RecordedAt: prev.RecordedAt}
 	}
+
+	health := HealthJSON{
+		Watchdog: WatchdogHealthJSON{Configured: h.watchdogURL != ""},
+	}
+	if h.watchdogURL != "" {
+		if v, ok, err := h.store.GetMeta("last_watchdog_ping"); ok && err == nil {
+			health.Watchdog.LastPingAt = &v
+		}
+	}
+	resp.Health = health
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
