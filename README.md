@@ -37,7 +37,7 @@ The dashboard has two tabs — **Stats** and **Alarms**:
 | Alarms | Per-alarm name, Pushover priority, last fired time, and current status |
 | Alarm History | Chronological log of every alarm firing within the selected window: alarm name, BG at fire time, and timestamp (newest first) |
 
-Time window pills (1h / 3h / 6h / 12h / 24h) in the header control the range shown across all widgets. Supports light and dark themes — toggle with the moon button in the header. Preferences are saved across page loads.
+Time window dropdown in the header controls the range shown across all widgets. Supports light and dark themes — toggle with the moon button in the header. Preferences are saved across page loads.
 
 ---
 
@@ -93,7 +93,7 @@ The script walks you through three prompts before deploying.
 
 **App name**
 
-Choose a name that is unique across all Fly.io users — `dexmon` is already taken. Use something like `dexmon-noah` or `dexmon-yourname`. This becomes your URL: `https://<appname>.fly.dev`.
+Choose a name that is unique across all Fly.io users — `dexmon` is already taken. The dashboard is publicly available so dont use a name that might identify you. This becomes your URL: `https://<appname>.fly.dev`.
 
 **Region**
 
