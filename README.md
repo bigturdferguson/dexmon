@@ -93,7 +93,7 @@ The script walks you through three prompts before deploying.
 
 **App name**
 
-Choose a name that is unique across all Fly.io users — `dexmon` is already taken. The dashboard is publicly available so dont use a name that might identify you. . This becomes your URL: `https://<appname>.fly.dev`.
+Choose a name that is unique across all Fly.io users — `dexmon` is already taken. The dashboard is publicly available so dont use a name that might identify you. This becomes your URL: `https://<appname>.fly.dev`.
 
 **Region**
 
